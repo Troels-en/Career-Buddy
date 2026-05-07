@@ -1,0 +1,152 @@
+[
+  {
+    "id": "j1",
+    "company": "Picus Capital",
+    "role": "Founders Associate Program",
+    "location": "Berlin / Munich",
+    "url": "https://picuscap.com/career/founders-associate",
+    "description": "2-year program for top business graduates. Work directly with portfolio companies on operational challenges. Path to investor or operator role.",
+    "requirements": "Top business school, 0-2y exp, exceptional analytical + communication skills, German + English",
+    "posted_date": "2026-04-15"
+  },
+  {
+    "id": "j2",
+    "company": "Cherry Ventures",
+    "role": "Investment Analyst",
+    "location": "Berlin",
+    "url": "https://www.cherry.vc/careers/investment-analyst",
+    "description": "Source and analyze early-stage deals across DACH and pan-EU. Support investment committee, build sector theses, run market mapping.",
+    "requirements": "1-2y banking/consulting/founder, business/STEM degree, structured thinking, hustle",
+    "posted_date": "2026-04-22"
+  },
+  {
+    "id": "j3",
+    "company": "Earlybird Venture Capital",
+    "role": "Investment Analyst — Digital East",
+    "location": "Munich / Berlin",
+    "url": "https://earlybird.com/careers",
+    "description": "Join the Digital East team focused on CEE pre-seed/seed AI-deep-tech investments. Source, evaluate, support portfolio.",
+    "requirements": "Top university, 0-2y in VC/banking/startup, strong English + 1 CEE language preferred",
+    "posted_date": "2026-04-10"
+  },
+  {
+    "id": "j4",
+    "company": "Project A Ventures",
+    "role": "Operating Associate",
+    "location": "Berlin",
+    "url": "https://www.project-a.com/careers",
+    "description": "Hands-on with portfolio: GTM, hiring, finance ops, BI. Directly support founders during scale-up phases.",
+    "requirements": "1-3y consulting/operator-role, deep operational instinct, German + English",
+    "posted_date": "2026-04-30"
+  },
+  {
+    "id": "j5",
+    "company": "HV Capital",
+    "role": "Investment Analyst",
+    "location": "Munich",
+    "url": "https://hvcapital.com/careers",
+    "description": "DACH-focused early-to-growth fund. Analyst supports deal-flow, due-diligence, portfolio reporting.",
+    "requirements": "Top business/finance degree, 1-2y banking/consulting, German native",
+    "posted_date": "2026-04-12"
+  },
+  {
+    "id": "j6",
+    "company": "Speedinvest",
+    "role": "Investment Associate — SaaS",
+    "location": "Berlin / Vienna",
+    "url": "https://speedinvest.com/careers",
+    "description": "B2B SaaS-focused team. Source seed-stage SaaS deals, build SaaS-metrics theses, support Series-A bridge.",
+    "requirements": "1-3y SaaS-operator or VC, business degree, deep SaaS-metrics knowledge",
+    "posted_date": "2026-05-01"
+  },
+  {
+    "id": "j7",
+    "company": "468 Capital",
+    "role": "Analyst",
+    "location": "Berlin",
+    "url": "https://www.468cap.com/careers",
+    "description": "Deep-tech / industrial-AI fund. Analyst supports thesis-building + deal-execution.",
+    "requirements": "Engineering/business degree, 0-2y exp, deep curiosity for hardware + AI",
+    "posted_date": "2026-04-18"
+  },
+  {
+    "id": "j8",
+    "company": "Lakestar",
+    "role": "Associate",
+    "location": "Berlin / Zurich",
+    "url": "https://lakestar.com/careers",
+    "description": "Pan-European Series-A fund. Associate supports sourcing + portfolio-mgmt.",
+    "requirements": "MBA or equivalent, 2-4y banking/consulting, multilingual EU",
+    "posted_date": "2026-03-28"
+  },
+  {
+    "id": "j9",
+    "company": "Plural",
+    "role": "Investor — Berlin Office",
+    "location": "Berlin",
+    "url": "https://plural.vc/careers",
+    "description": "Founder-led fund expanding to Berlin. Looking for first investor on the ground.",
+    "requirements": "Operator background preferred, 2-4y exp, founder-network in DACH",
+    "posted_date": "2026-04-05"
+  },
+  {
+    "id": "j10",
+    "company": "General Catalyst",
+    "role": "Associate — Europe",
+    "location": "Berlin / London",
+    "url": "https://www.generalcatalyst.com/careers",
+    "description": "Multistage fund expanding European presence. Associate supports thesis-development on applied-AI + healthcare.",
+    "requirements": "MBA or top-undergrad, 2-3y banking/consulting/startup",
+    "posted_date": "2026-04-20"
+  },
+  {
+    "id": "j11",
+    "company": "9Yards Capital",
+    "role": "Founders Associate",
+    "location": "Munich / Remote-EU",
+    "url": "https://9yards.com/careers",
+    "description": "Family-office VC. FA supports investments + portfolio + LP communication.",
+    "requirements": "Business graduate, 0-2y exp, German + English, financial modelling",
+    "posted_date": "2026-04-25"
+  },
+  {
+    "id": "j12",
+    "company": "Sastrify",
+    "role": "Founders Associate",
+    "location": "Berlin / Cologne",
+    "url": "https://sastrify.com/careers",
+    "description": "SaaS-procurement scale-up. FA reports to CEO, runs cross-functional projects from strategy to operations.",
+    "requirements": "Top business degree, 0-2y consulting/startup, structured + hustle",
+    "posted_date": "2026-05-02"
+  },
+  {
+    "id": "j13",
+    "company": "Trade Republic",
+    "role": "Strategy Associate",
+    "location": "Berlin",
+    "url": "https://traderepublic.com/careers",
+    "description": "Fintech unicorn. Strategy team works on product, market entry, business-model evolution.",
+    "requirements": "MBB consulting background OR top MBA, 2-3y exp",
+    "posted_date": "2026-04-14"
+  },
+  {
+    "id": "j14",
+    "company": "Helsing",
+    "role": "Business Operations Associate",
+    "location": "Berlin / Munich",
+    "url": "https://helsing.ai/careers",
+    "description": "Defense AI company. BizOps Associate works directly with leadership on cross-functional problems.",
+    "requirements": "Top university, 1-3y consulting/operator, security-clearance-eligible",
+    "posted_date": "2026-04-08"
+  },
+  {
+    "id": "j15",
+    "company": "Atomico",
+    "role": "Associate — Europe",
+    "location": "London / Berlin (hybrid)",
+    "url": "https://atomico.com/careers",
+    "description": "Largest European VC. Associates support thesis + sourcing + portfolio across pan-EU.",
+    "requirements": "Top university, 2-4y banking/consulting/startup, network in DACH or Nordics",
+    "posted_date": "2026-04-02"
+  }
+]

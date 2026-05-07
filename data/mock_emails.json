@@ -1,0 +1,82 @@
+[
+  {
+    "id": "e1",
+    "from": "marvin@pedlar.de",
+    "to": "user@example.com",
+    "subject": "Re: Founders Associate Application — Pedlar",
+    "date": "2026-05-07T08:30:00Z",
+    "body": "Hi Troels, thank you for your application and the time you took for our calls. After much consideration, we've decided to move forward with another candidate whose profile aligns more closely with the operational scope of this role. We genuinely appreciated your enthusiasm and your CLSBE background. Best of luck with your search — feel free to stay in touch for future opportunities. Marvin",
+    "expected_classification": "rejection",
+    "matches_company": "Pedlar"
+  },
+  {
+    "id": "e2",
+    "from": "alberto@avi.vc",
+    "to": "user@example.com",
+    "subject": "Avi Investment Analyst — next steps",
+    "date": "2026-05-06T14:12:00Z",
+    "body": "Hi Troels, great chatting yesterday. We'd love to invite you to the next round — a deep-dive interview with our managing partner. Are you available Thursday 3pm CET? It will be ~60 minutes, focused on a market sizing case + portfolio review. Looking forward. Alberto",
+    "expected_classification": "interview-invite",
+    "matches_company": "Avi"
+  },
+  {
+    "id": "e3",
+    "from": "careers@rust-fund.com",
+    "to": "user@example.com",
+    "subject": "Application received — Operating Associate",
+    "date": "2026-05-01T09:00:00Z",
+    "body": "Thank you for your application to the Operating Associate role at Rust. We'll review and get back within 2 weeks.",
+    "expected_classification": "confirmation",
+    "matches_company": "Rust"
+  },
+  {
+    "id": "e4",
+    "from": "talent@picuscapital.com",
+    "to": "user@example.com",
+    "subject": "Coffee chat — Picus Capital FA Program",
+    "date": "2026-05-05T11:45:00Z",
+    "body": "Hi Troels, your application stood out. Before formal interviews, we'd love to set up an informal 30-min coffee chat to align expectations on the FA-Program. Suggest 3 slots next week and our team-lead will pick. Cheers, Talent Team",
+    "expected_classification": "interview-invite",
+    "matches_company": "Picus Capital"
+  },
+  {
+    "id": "e5",
+    "from": "team@cherry.vc",
+    "to": "user@example.com",
+    "subject": "Cherry Ventures Investment Analyst",
+    "date": "2026-05-03T16:00:00Z",
+    "body": "Dear Troels, thanks for applying. While your background is impressive, we're looking for someone with deeper SaaS-metrics expertise for this specific role. We'll keep your CV on file and reach out if a better fit opens. Best, Cherry Team",
+    "expected_classification": "rejection",
+    "matches_company": "Cherry Ventures"
+  },
+  {
+    "id": "e6",
+    "from": "kim@projecta.com",
+    "to": "user@example.com",
+    "subject": "Quick question on your CV",
+    "date": "2026-05-06T10:00:00Z",
+    "body": "Hi Troels, reviewing your application — could you share a brief example of a B2B deal you led during your CLSBE projects? Even a 1-paragraph summary would help us assess fit faster. Thanks, Kim",
+    "expected_classification": "follow-up-question",
+    "matches_company": "Project A"
+  },
+  {
+    "id": "e7",
+    "from": "noreply@earlybird.com",
+    "to": "user@example.com",
+    "subject": "Earlybird Investment Analyst — application received",
+    "date": "2026-04-28T08:00:00Z",
+    "body": "Hi Troels, we've received your application. Our hiring process takes 4-6 weeks. We'll be in touch.",
+    "expected_classification": "confirmation",
+    "matches_company": "Earlybird"
+  },
+  {
+    "id": "e8",
+    "from": "hr@speedinvest.com",
+    "to": "user@example.com",
+    "subject": "Offer — Speedinvest Investment Associate",
+    "date": "2026-05-07T07:00:00Z",
+    "body": "Dear Troels, we are delighted to extend an offer for the Investment Associate role at Speedinvest, Berlin. Compensation: €52k base + €5k performance bonus + standard benefits. Start date: flexible. Please find the formal offer letter attached. We hope you'll join us. Sincerely, HR",
+    "expected_classification": "offer",
+    "matches_company": "Speedinvest"
+  }
+]
