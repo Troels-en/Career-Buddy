@@ -1,4 +1,4 @@
-# fa-track
+# Career-Buddy
 
 > Land your first startup role. Track applications, learn what works, find roles that fit.
 
@@ -11,7 +11,7 @@
 - No self-knowledge layer: which role-types respond, which don't, why
 - Tools like Clera (Junior-Job-Board) have WhatsApp-chat that forgets you sent a CV — dumb
 
-**fa-track v0.1 (this hackathon ship):**
+**Career-Buddy v0.1 (this hackathon ship):**
 - Onboarding-Chat — LLM learns your target role, background, geo
 - CV-Upload — Claude extracts skills/strengths/gaps
 - Add-Application — paste URL → AI parses JD, scores fit vs. your profile
