@@ -1,13 +1,15 @@
-# Lovable Master-Prompt — Career-Buddy v3 (Mock-Mode, Phased)
+# Lovable Master-Prompt — Career-Buddy v4 (Mock-Mode, Phased)
 
-Paste the block below as initial Lovable prompt. Phased priority is built in: if time runs short, Lovable will still produce a demo-ready Phase-1 even if Phase-2/3 stay rough.
+> **Read first:** `/docs/PROJECT_CONTEXT.md` (problem, persona, vision, brand, hard constraints, design tokens). This file = build instructions only. Iterative tweaks live in `/docs/REFINEMENT_PROMPTS.md`. Save new documentation as `.md` under `/docs/`.
+
+Paste the block below as initial Lovable prompt. Phased priority is built in: if time runs short, Lovable still ships a demo-ready Phase-1 even if Phase-2/3 stay rough.
 
 ---
 
 ```
-Build a single-page web app called "Career-Buddy" — a Founders-Associate / startup-entry-role application tracker for business-background graduates (Bucerius, CDTM, CLSBE, INSEAD, HEC, LBS) who want to land their first startup role outside engineering.
+Build a single-page web app called "Career-Buddy" — a Founders-Associate / startup-entry-role application tracker for business-background graduates (Bucerius, CDTM, CLSBE, INSEAD, HEC, LBS, WHU, ESCP, RSM, Bocconi, IE) chasing their first non-engineering startup role: Founders Associate, BizOps, Strategy, BD, Chief-of-Staff, junior VC.
 
-THIS IS A 2-HOUR HACKATHON DEMO BUILD RUNNING IN MOCK MODE.
+THIS IS A 2-HOUR HACKATHON DEMO BUILD RUNNING IN MOCK MODE. Stable project context (problem, persona, vision, brand, design tokens, hard constraints) is in /docs/PROJECT_CONTEXT.md — treat it as authoritative background.
 
 ================================================================
 HARD CONSTRAINTS (NEVER VIOLATE)
@@ -15,30 +17,30 @@ HARD CONSTRAINTS (NEVER VIOLATE)
 - NO live API calls. NO OpenAI / Anthropic / Claude / GPT / LLM connectors. NO API keys.
 - NO Supabase Auth. NO Supabase Storage. NO Google login. NO email APIs. NO real PDF parsing. NO URL fetching.
 - All "AI" output is deterministic. Every visible string is hardcoded below or read literally from /data/mock_emails.json and /data/vc_jobs.json (no inference, no generation).
-- Persist app state to localStorage (key "career-buddy-state"). Optionally write to existing Supabase tables IF a Supabase client is already configured; otherwise skip Supabase entirely. The app must work end-to-end with localStorage alone.
-- NO references to OpenAI, Anthropic, GPT, Claude, or any LLM provider in the UI or in code (except the visible status pill "Mock AI mode · cached demo responses").
+- Persist app state to localStorage (key "career-buddy-state"). DO NOT write to Supabase. Supabase tables exist in the repo schema but are out of scope for this build.
+- NO references to OpenAI, Anthropic, GPT, Claude, or any LLM provider in generated app UI, code comments, variable names, or user-facing strings — except the visible status pill "Mock AI mode · cached demo responses".
 
 ================================================================
-PHASED BUILD PRIORITY (INTERPRET THIS LITERALLY)
+PHASED BUILD PRIORITY (INTERPRET LITERALLY)
 ================================================================
 PHASE 1 — ABSOLUTELY MUST SHIP (target: first 60 min)
   - Section 0: Header
   - Section 1: Onboarding & Profile (chat input + canned reply + profile card; CV textarea + canned analysis)
-  - Section 2: Applications Tracker — pre-seeded 8 rows, Add-Application modal, **Sync Inbox with stagger animation + summary strip**
-  - Section 5: Career-Buddy Vision Strip (one-line at bottom)
+  - Section 2: Applications Tracker — pre-seeded 8 rows, Add-Application modal, Sync Inbox with stagger animation + summary strip
+  - Section 5: Career-Buddy Vision Strip (compact footer)
 
-PHASE 2 — SHOULD SHIP (target: 60-90 min)
+PHASE 2 — SHOULD SHIP (target: 60–90 min)
   - Section 3: Insights Panel (3 hardcoded bullets + refresh shimmer)
 
-PHASE 3 — NICE-TO-HAVE (target: 90-105 min, only if Phase 1+2 fully working)
+PHASE 3 — NICE-TO-HAVE (target: 90–105 min, only if Phase 1+2 fully working)
   - Section 4: VC Jobs Feed (15 cards, top-3 glow, Add-to-tracker)
 
-If at any point the build is not converging cleanly, drop Section 4 first, then Section 3. Never drop Section 2's Sync Inbox — that is the demo's single most important feature.
+If the build is not converging cleanly, drop Section 4 first, then Section 3. NEVER drop Section 2's Sync Inbox — that is the demo's single most important feature.
 
 ================================================================
 STACK
 ================================================================
-React + Tailwind. Existing Supabase Postgres tables (`users`, `applications`, `events`, `vc_jobs`) may be used read-only or skipped. localStorage is the source of truth.
+React + Tailwind. localStorage is the source of truth. No backend at runtime.
 
 ================================================================
 VISUAL SYSTEM (DO NOT INVENT VARIATIONS)
@@ -69,7 +71,7 @@ SECTION 0 — HEADER
 Sticky top bar:
 - Left: text logo "Career-Buddy" (font-semibold, text-lg, accent color #7c3aed)
 - Right: status pill "Mock AI mode · cached demo responses" (text-xs, bg-gray-100, rounded-full, px-3 py-1)
-- Far right: small "Reset demo" link (text-xs text-gray-400, underline). On click: clear localStorage and reload — used between demo runs.
+- Far right: small "Reset demo" link (text-xs, text-gray-400, underline). On click: clear localStorage, reload, AND restart the full onboarding flow (do not skip the Build-profile chat on the reloaded page).
 
 ================================================================
 SECTION 1 — ONBOARDING & PROFILE
@@ -82,30 +84,40 @@ ONBOARDING CHAT:
 - Submit button: "Build profile"
 - On submit (any non-empty text): show 600ms "Building your profile…" spinner inside the button, then render this exact assistant reply in a chat bubble below the input:
   "Got it. Target: Founders Associate at AI-startups + Operating Associate / BizOps / Strategy roles at early-stage startups. Geo: Berlin / Remote-DACH. Background: CLSBE Master, business track, 0–2y experience."
-- Below the assistant reply, render the PROFILE CARD.
+- Below the assistant reply, render the PROFILE CARD (expanded form).
 
-PROFILE CARD (always visible after first submit; collapses to a one-line summary after Sync runs, with "edit profile" link to expand):
-  Name:        Troels K.
-  Target Role: Founders Associate / Operating Associate
-  Target Geo:  DACH (Berlin / Remote)
-  Background:  CLSBE Master, business track
-  Strong:      B2B-sales, structured thinking
-  Gap:         SaaS-metrics, ML fundamentals
+PROFILE CARD STATES:
+- EXPANDED (default after first submit, and on every page reload):
+    Name:        Troels K.
+    Target Role: Founders Associate / Operating Associate
+    Target Geo:  DACH (Berlin / Remote)
+    Background: CLSBE Master, business track
+    Strong:      B2B-sales, structured thinking
+    Gap:         SaaS-metrics, ML fundamentals
+- COLLAPSED (after Sync Inbox runs once): single-line summary
+    "Troels K. · Founders Associate · Berlin / Remote-DACH · CLSBE Master"
+  with an "edit profile" link (text-xs, accent-colored, underline) that re-expands the card to its full form.
 
 CV PASTE-ZONE (NOT a PDF dropzone):
-- Below the profile card, a <textarea> (rows=4) labeled "Paste your CV text". Below it, button "Analyze CV".
-- On click (or on textarea input >50 chars): 800ms simulated delay, then APPEND to the profile card a "CV analysis" block with this exact text:
+- Below the profile card, a <textarea rows=4> labeled "Paste your CV text". Below it, button "Analyze CV".
+- Trigger: button click ONLY (no auto-trigger on text length). On click: 800ms simulated delay, then APPEND a "CV analysis" block to the profile card with this exact text:
   "Strong: B2B-sales, structured thinking.
    Gap: SaaS-metrics, ML fundamentals.
    Recommend: SaaStr-basics module before next interview."
 - NEVER attempt real PDF/text parsing. Always return the canned string.
+
+RELOAD BEHAVIOR:
+- On reload, if localStorage state exists, render the populated app (Sections 2–5 visible, profile card collapsed if Sync was already run, expanded otherwise).
+- Onboarding chat input remains visible at the top so judges can see the full arc on first run.
+- Reset demo link in the header is the only way to wipe state and restart from scratch.
 
 ================================================================
 SECTION 2 — APPLICATIONS TRACKER (left column, 2/3 width)
 ================================================================
 Card-styled table. Columns: Company | Role | Status | Last Event | Next Action | Fit
 
-PRE-SEED 8 ROWS on first load (mix of VC-FA-roles and startup-operator-roles to match the "outside engineering" positioning):
+PRE-SEED 8 ROWS on first load (mix of VC-FA roles and startup-operator roles to match the "outside engineering" positioning):
+
 | # | Company          | Role                   | Status   | Last Event | Next Action          | Fit |
 |---|------------------|------------------------|----------|------------|----------------------|-----|
 | 1 | Pedlar           | Founders Associate     | applied  | —          | Awaiting reply       | 7.2 |
@@ -136,64 +148,68 @@ CONTROLS (above the table, right-aligned):
 - "Sync Inbox" (PRIMARY DEMO BUTTON — large, bg-purple-600 text-white, font-semibold, px-6 py-2.5, rounded-lg, shadow-md hover:shadow-lg, with mail-icon to its left)
 
 ADD APPLICATION:
-- Modal with fields: company, role, url (optional), applied_date (default today)
-- Submit: 700ms simulated delay, then append a new row with status=applied, fit=8.4, next_action="Prep B2B-deal example"
+- Modal with fields: company, role, url (optional), applied_date (default = today, ISO format).
+- Submit: 700ms simulated delay, then append a new row with status=applied, fit=8.4, next_action="Prep B2B-deal example".
 - Do NOT fetch or parse the URL.
 
 SYNC INBOX (THE DEMO WOW MOMENT):
-The mock_emails.json file contains exactly these 8 entries (CANONICAL CONTRACT — if the file is missing or differs, use this list verbatim):
 
-| # | matches_company  | expected_classification | subject (one-line)                                |
-|---|------------------|-------------------------|---------------------------------------------------|
-| 1 | Pedlar           | rejection               | Re: Founders Associate application — outcome      |
-| 2 | Avi              | interview-invite        | Avi Investment Analyst — next steps               |
-| 3 | Rust             | (no email — silent)     | (no event)                                        |
-| 4 | Picus Capital    | interview-invite        | Coffee chat — Picus Capital FA Program            |
-| 5 | Cherry Ventures  | rejection               | Cherry Ventures Investment Analyst — decision     |
-| 6 | Project A        | follow-up-question      | Quick question on your CV (Kim @ Project A)       |
+Mock_emails.json contains exactly 8 entries (CANONICAL CONTRACT — if the file is missing or differs, use this list verbatim):
+
+| # | matches_company  | expected_classification | subject (one-line)                                  |
+|---|------------------|-------------------------|-----------------------------------------------------|
+| 1 | Pedlar           | rejection               | Re: Founders Associate application — outcome        |
+| 2 | Avi              | interview-invite        | Avi Investment Analyst — next steps                 |
+| 3 | Rust             | confirmation            | Application received — Operating Associate          |
+| 4 | Picus Capital    | interview-invite        | Coffee chat — Picus Capital FA Program              |
+| 5 | Cherry Ventures  | rejection               | Cherry Ventures Investment Analyst — decision       |
+| 6 | Project A        | follow-up-question      | Quick question on your CV (Kim @ Project A)         |
 | 7 | Earlybird        | confirmation            | Earlybird Investment Analyst — application received |
-| 8 | Speedinvest      | offer                   | Offer — Speedinvest Investment Associate          |
+| 8 | Speedinvest      | offer                   | Offer — Speedinvest Investment Associate            |
 
-Each entry exposes: matches_company, expected_classification, subject, body, date, from. Read these fields literally — DO NOT classify or infer.
+Each entry exposes: matches_company, expected_classification, subject, body, date (ISO), from. Read these fields literally — DO NOT classify or infer.
 
 ROW-CHANGE LEDGER (drives the summary count):
-- 6 rows change status: Pedlar (rejected), Avi (interview-2), Picus Capital (interview-2), Cherry Ventures (rejected), Project A (follow-up-needed), Speedinvest (offer)
-- 1 row updates only its last_event_date but NOT its status: Earlybird (confirmation — counts as scanned, NOT counted in "6 applications updated")
-- 1 row receives no event at all: Rust (no matching email — counts as scanned only)
-- "6 next actions created" = the same 6 rows that changed status
+- 6 rows change status (status_changed=true): Pedlar (rejected), Avi (interview-2), Picus Capital (interview-2), Cherry Ventures (rejected), Project A (follow-up-needed), Speedinvest (offer).
+- 2 rows update only their last_event_date (status unchanged): Earlybird (confirmation), Rust (confirmation).
+- "8 emails scanned" = all 8 mock entries were processed.
+- "6 applications updated" = the 6 rows whose status changed.
+- "6 next actions created" = the same 6 rows.
+- "1 offer received" = Speedinvest.
 
 CLASSIFICATION → UPDATE MAPPING (deterministic, no inference):
-  rejection           → status="rejected",        next_action="Ask for feedback (draft ready)"
-  interview-invite    → status="interview-2";
-                        for matches_company="Avi": next_action="Thu 3pm CET market sizing case"
-                        for matches_company="Picus Capital": next_action="Coffee chat — pick 3 slots"
+  rejection           → status="rejected",         next_action="Ask for feedback (draft ready)"
+  interview-invite    → status="interview-2";   // intentional jump applied → interview-2 to signal a positive accelerated round
+                          for matches_company="Avi": next_action="Thu 3pm CET market sizing case"
+                          for matches_company="Picus Capital": next_action="Coffee chat — pick 3 slots"
   follow-up-question  → status="follow-up-needed", next_action="Reply to Kim: B2B deal example"
   offer               → status="offer",            next_action="Review offer letter — €52k base"
-  confirmation        → status unchanged (still "applied"), only update last_event_date to email.date
+  confirmation        → status unchanged (still "applied"); update last_event_date to email.date; next_action unchanged.
 
 ANIMATION SPEC (declarative — keep this primitive simple):
-- On Sync click, the button enters loading state for 1500ms. Show inside the button: small spinner + text "Scanning 8 cached emails…"
-- During that 1500ms window, walk through emails in this exact order and apply updates with a 250ms stagger between each row:
+- On Sync click, the button enters loading state for 2000ms. Show inside the button: small spinner + text "Scanning 8 cached emails…"
+- During the 2000ms window, walk through emails in this exact order, applying updates with a 250ms stagger between each row (first update at t=0, last at t=1750ms):
     1. Pedlar           → rejected
     2. Avi              → interview-2
     3. Picus Capital    → interview-2
     4. Cherry Ventures  → rejected
     5. Project A        → follow-up-needed
     6. Earlybird        → confirmation (no badge change, only last_event_date)
-    7. Rust             → no email match, no change
+    7. Rust             → confirmation (no badge change, only last_event_date)
     8. Speedinvest      → offer
 - Each row receives a single 400ms `bg-purple-100` flash via Tailwind transition-colors duration-[400ms] ease-out, then settles to its new badge state and updated next_action text.
 - Do NOT add typewriter effects, scale tweens, or per-row custom animations. ONE animation primitive across all rows. Keep it simple.
 
 ANIMATION FALLBACK (if Lovable's first generation produces broken stagger):
-- Acceptable degradation: spinner runs for 1500ms, then ALL changed rows update simultaneously with a single 400ms purple-100 flash. The summary strip still renders. This is a fully acceptable v1.
+- Acceptable degradation: spinner runs for 2000ms, then ALL changed rows update simultaneously with a single 400ms purple-100 flash. The summary strip still renders. This is a fully acceptable v1.
 - Refinement prompts can attempt the stagger upgrade later.
 
-SUMMARY STRIP (renders at t≈1800ms after Sync, below the table):
+SUMMARY STRIP (renders at t=2200ms after Sync click, below the table):
 Full-width, bg-gray-50, rounded-lg, px-4 py-3, text-sm, with this exact text:
   "8 emails scanned · 6 applications updated · 6 next actions created · 1 offer received"
 
-(Math: 6 status changes = Pedlar, Avi, Picus, Cherry, Project A, Speedinvest. Earlybird's status didn't change but Rust got no event. Next-actions updated for the same 6 rows.)
+POST-SYNC PROFILE COLLAPSE:
+- Once Sync has run successfully, collapse the profile card to its one-line summary form (see Section 1).
 
 ================================================================
 SECTION 3 — INSIGHTS PANEL (right sticky sidebar, 1/3 width — Phase 2)
@@ -223,22 +239,20 @@ Each card (bg-white, border, rounded-12px, p-5, shadow-sm, hover:shadow-md):
 - "Why this matches" line (text-sm, mt-3, italic)
 - "Add to tracker" button at bottom (text-xs, accent border, rounded-lg)
 
-LOAD vc_jobs.json (15 entries, fields: company, role, location, url, description, requirements, posted_date) and apply HARDCODED FIT SCORES:
+LOAD vc_jobs.json (15 entries; fields: company, role, location, url, description, requirements, posted_date) and apply HARDCODED FIT SCORES:
 - Cherry Ventures: 8.7 | Earlybird Venture Capital: 8.4 | Project A Ventures: 8.1
 - Picus Capital: 7.9 | Speedinvest: 7.7 | HV Capital: 7.5
 - Lakestar: 7.3 | Atomico: 7.1 | General Catalyst: 6.9
 - Plural: 6.7 | 9Yards Capital: 6.5 | 468 Capital: 6.3
 - Sastrify: 6.1 | Trade Republic: 5.9 | Helsing: 5.7
 
-WHY-THIS-MATCHES (hardcoded by company):
-- Cherry Ventures: "Matches your B2B + Series-A focus — direct overlap with target."
-- Earlybird Venture Capital: "Berlin HQ, B2B portfolio, FA-track structured similarly to your goal."
-- Project A Ventures: "Operator-led, strong CLSBE alumni network, B2B SaaS lean."
+WHY-THIS-MATCHES (deterministic by fit_score rank, NOT by hardcoded company name):
+- Top-3 by fit (descending sort): "Matches your B2B + Series-A focus — direct overlap with target."
 - All others: "DACH-based VC with FA-track openings — review JD."
 
-TOP-3 GLOW: cards for Cherry Ventures, Earlybird Venture Capital, Project A Ventures get `ring-2 ring-purple-500 ring-opacity-50` plus `animate-pulse` (slow, 2s).
+TOP-3 GLOW: compute the top-3 cards by fit_score (descending) at render time. Apply to those 3 cards: `ring-2 ring-purple-500 ring-opacity-50` plus `animate-pulse` (slow, 2s). Do NOT hardcode company names — derive from data so re-scoring stays consistent.
 
-"Add to tracker" → append to Section 2 with status=applied, fit=card's fit, next_action="Awaiting reply".
+"Add to tracker" → append to Section 2 with status=applied, fit=card's fit, next_action="Prep B2B-deal example" (matches Add-Application default).
 
 ================================================================
 SECTION 5 — CAREER-BUDDY VISION STRIP (compact footer)
@@ -251,35 +265,49 @@ Body (text-base text-gray-700, mt-2):
 ================================================================
 GLOBAL RULES
 ================================================================
-- Every interaction <2s perceived latency. Use simulated 400-800ms delays only where the "AI" needs to feel real.
-- Optimistic UI: update state first; spinner only inside Sync button (1500ms while animation plays).
-- localStorage key: "career-buddy-state". Persist applications array + profile. Restore on page load. If state already exists on first load, skip the "Build profile" flow and show populated app immediately.
+- Every interaction <2s perceived latency. Use simulated 400-800ms delays for the onboarding chat (600ms) and CV analysis (800ms); 700ms for Add Application; 2000ms for Sync Inbox. These are intentional pacing, not real network calls.
+- Optimistic UI: update state first; spinners only inside the buttons that triggered the action (Build profile, Analyze CV, Add Application, Sync Inbox).
+- localStorage key: "career-buddy-state". Persist applications array + profile + sync-completed flag. Restore on page load.
 - Mobile responsive (<768px): sections stack single-column, sticky sidebar becomes inline.
 - Favicon: a purple "C" on white circle.
+- Documentation: when generating supporting docs (rationale, change-log, decisions), save them as .md files under /docs/ — not inside React components.
 
 ================================================================
 ACCEPTANCE CRITERIA (CHECKLIST)
 ================================================================
 Phase 1 (must work):
 1. App loads with 8 pre-seeded applications visible immediately.
-2. Onboarding chat input accepts text and renders the canned reply + profile card.
-3. CV textarea accepts paste/text and appends the canned analysis block.
+2. Onboarding chat input accepts text and renders the canned reply + expanded profile card.
+3. CV textarea accepts paste/text and "Analyze CV" button click appends the canned analysis block.
 4. "+ Add Application" modal works and appends a row.
 5. "Sync Inbox" button runs the animation (stagger preferred, simultaneous-flash acceptable as fallback) and ends with the summary strip showing exactly: "8 emails scanned · 6 applications updated · 6 next actions created · 1 offer received".
-6. After Sync: Pedlar=rejected, Avi=interview-2, Picus Capital=interview-2, Cherry Ventures=rejected, Project A=follow-up-needed, Speedinvest=offer; Earlybird and Rust unchanged status.
-7. "Reset demo" link in header clears state and reloads.
+6. After Sync: Pedlar=rejected, Avi=interview-2, Picus Capital=interview-2, Cherry Ventures=rejected, Project A=follow-up-needed, Speedinvest=offer; Earlybird and Rust unchanged status (only last_event_date updated).
+7. Profile card collapses to its one-line form after Sync; "edit profile" re-expands it.
+8. "Reset demo" link in header clears state, reloads, and restarts onboarding from scratch.
 
 Phase 2 (should work):
-8. Insights panel shows all 3 hardcoded bullets, refresh button shimmers and re-renders.
+9. Insights panel shows all 3 hardcoded bullets, refresh button shimmers and re-renders.
 
 Phase 3 (nice-to-have):
-9. VC Jobs Feed shows 15 cards from vc_jobs.json with hardcoded fit scores; top 3 (Cherry, Earlybird, Project A) glow.
-10. "Add to tracker" on a job card appends a row to Section 2.
+10. VC Jobs Feed shows 15 cards from vc_jobs.json with hardcoded fit scores; top-3 by fit (Cherry, Earlybird, Project A) glow — derived from data, not hardcoded names.
+11. "Add to tracker" on a job card appends a row to Section 2.
 
 Always:
-11. Career-Buddy Vision Strip visible at the bottom.
-12. NO references in UI or code to OpenAI, Anthropic, GPT, Claude, or any external AI provider.
-13. Mobile-responsive layout under 768px.
+12. Career-Buddy Vision Strip visible at the bottom.
+13. NO references in UI or code to OpenAI, Anthropic, GPT, Claude, or any external AI provider.
+14. Mobile-responsive layout under 768px.
+
+================================================================
+DEMO NARRATIVE (60–90 SECOND ARC THE UI MUST SUPPORT)
+================================================================
+1. Page loads → tagline + 8 pre-seeded applications visible immediately.
+2. Demoer types into onboarding chat → profile card builds.
+3. Demoer pastes CV text → "Analyze CV" → analysis block appends.
+4. Demoer clicks "+ Add Application" → new row appears.
+5. Demoer clicks "Sync Inbox" → 8 cached emails fan out across the tracker, 6 rows flash purple and change status, summary strip lands. THIS IS THE WOW MOMENT.
+6. Demoer scrolls to Insights → 3 pattern bullets.
+7. Demoer scrolls to Jobs Feed → 15 cards, top-3 glow.
+8. Vision strip closes the pitch.
 
 ================================================================
 DO NOT IMPLEMENT
@@ -293,15 +321,3 @@ DO NOT IMPLEMENT
 - Supabase Storage uploads
 - Payment, teams, settings, notifications panels
 ```
-
----
-
-## Iterative Refinement Prompts (only if specific issue surfaces)
-
-1. **Sync stagger broken** — "Re-implement Sync Inbox stagger using a setTimeout chain at 250ms intervals in this exact company order: Pedlar, Avi, Picus Capital, Cherry Ventures, Project A, Earlybird, Rust, Speedinvest. Each row applies bg-purple-100 for 400ms then settles to its final badge state. No typewriter, no scale animations."
-
-2. **Top-3 glow too weak** — "Increase top-3 jobs glow to ring-2 ring-purple-500 ring-opacity-60 + animate-pulse (2s, slow)."
-
-3. **Mock pill missing** — "Add the 'Mock AI mode · cached demo responses' status pill to the top-right of the sticky header."
-
-4. **Status pre-seed mismatch** — "Pre-seed exactly the 8 rows specified in Section 2 of the master prompt. Reset state in localStorage if needed."
