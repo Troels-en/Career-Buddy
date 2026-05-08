@@ -42,6 +42,22 @@ ls data/
 - [ ] Layer 2 — CV-Coach + Cover-Letter-Generator + Interview-Prep + Growth-Recommender (courses/videos/events)
 - [ ] Layer 3 — Career Buddy (full vision: switch-timing, salary-negotiation, headhunter-broker, life-stage-aware)
 
+## Project documentation
+
+| File | Purpose |
+|---|---|
+| [`docs/brief.md`](docs/brief.md) | Product brief: problem, primary user, core job, success criteria |
+| [`docs/build.md`](docs/build.md) | Build scope, phased priority, screens, features, acceptance criteria |
+| [`docs/design.md`](docs/design.md) | Visual direction, design tokens, motion |
+| [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) | Stable project knowledge for Lovable's project memory |
+| [`docs/LOVABLE_PROMPT.md`](docs/LOVABLE_PROMPT.md) | Canonical initial-generation prompt for Lovable |
+| [`docs/refinement-prompts.md`](docs/refinement-prompts.md) | Iterative prompts to fix specific Lovable misfires |
+| [`docs/project-knowledge.md`](docs/project-knowledge.md) | The Project Knowledge prompt to paste into Lovable settings |
+| [`docs/scraper-plan.md`](docs/scraper-plan.md) | Layer-1 VC + portfolio scraper architecture |
+| [`docs/PRD.md`](docs/PRD.md) | Long-form PRD covering Layers 0–3 |
+| [`docs/DEMO.md`](docs/DEMO.md) | Demo script / talk track |
+| [`docs/decisions/`](docs/decisions/) | Architecture Decision Records (ADRs) — see [the index](docs/decisions/README.md) |
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

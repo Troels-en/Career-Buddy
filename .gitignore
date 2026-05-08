@@ -8,3 +8,22 @@ build/
 *.log
 .vscode/
 .idea/
+
+# Tooling artefacts
+.playwright-mcp/
+.claude/
+
+# Stray non-project files (move out when convenient)
+low_fodmap_foods.csv
+
+# Python scraper (Layer 1+)
+__pycache__/
+*.pyc
+.venv/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Workplans (gitignored per global convention)
+WORKPLAN-*.md
