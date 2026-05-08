@@ -1,12 +1,10 @@
--- Career-Buddy schema (Layer-0 baseline).
+-- 0001 — Layer-0 baseline (already applied to Career-Buddy Supabase project).
+-- This file is the historical first migration. It is identical in content to
+-- ../schema.sql and exists here so future contributors can replay the full
+-- migration history from a clean database.
 --
--- This file is the legacy single-shot schema used during the hackathon.
--- The canonical migration history now lives in data/migrations/. To bring
--- a fresh database up to current state, run:
---
---   cd scripts/scraper && uv run python -m career_buddy_scraper.cli.migrate
---
--- Do NOT add new tables here; create a new migration file instead.
+-- DO NOT EDIT once a migration has been applied. Add a new file with a higher
+-- sequence number instead.
 
 -- Enable UUID generation
 create extension if not exists "uuid-ossp";
@@ -37,9 +35,6 @@ create table if not exists applications (
   url text,
   applied_date date default current_date,
   status text default 'applied',
-    -- allowed values:
-    -- applied | rejected | interview-1 | interview-2 | offer
-    -- accepted | declined | silent | follow-up-needed
   fit_score numeric,
   notes text,
   last_event_date timestamptz default now(),
@@ -51,15 +46,12 @@ create index if not exists idx_applications_user on applications(user_id);
 create index if not exists idx_applications_company on applications(lower(company));
 
 -- ============================================================
--- events  (email-related events linked to an application)
+-- events
 -- ============================================================
 create table if not exists events (
   id uuid primary key default uuid_generate_v4(),
   application_id uuid references applications(id) on delete cascade,
   event_type text not null,
-    -- allowed values:
-    -- rejection | interview-invite | follow-up-question | offer
-    -- confirmation | silent-flag
   email_subject text,
   email_body text,
   parsed_action text,
@@ -69,7 +61,8 @@ create table if not exists events (
 create index if not exists idx_events_application on events(application_id);
 
 -- ============================================================
--- vc_jobs  (centralized, scraped daily, no per-user data)
+-- vc_jobs (Layer-0 hackathon fixture; superseded by `jobs` in migration 0002,
+-- but kept for backward compatibility with the Lovable Layer-0 build)
 -- ============================================================
 create table if not exists vc_jobs (
   id uuid primary key default uuid_generate_v4(),
@@ -82,17 +75,3 @@ create table if not exists vc_jobs (
   posted_date date,
   scraped_at timestamptz default now()
 );
-
--- ============================================================
--- Row Level Security (light-touch for hackathon)
--- ============================================================
--- Disable RLS for hackathon to keep iteration fast.
--- Enable + add proper policies before going live with real users.
-
--- alter table users      enable row level security;
--- alter table applications enable row level security;
--- alter table events     enable row level security;
-
--- Read-only public access to vc_jobs is fine since it's curated public data.
--- alter table vc_jobs enable row level security;
--- create policy "vc_jobs are publicly readable" on vc_jobs for select using (true);

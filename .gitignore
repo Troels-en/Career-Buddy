@@ -12,6 +12,7 @@ build/
 # Tooling artefacts
 .playwright-mcp/
 .claude/
+artifacts/
 
 # Stray non-project files (move out when convenient)
 low_fodmap_foods.csv

@@ -15,9 +15,22 @@ uv run ruff format .     # format
 uv run mypy career_buddy_scraper  # type-check
 ```
 
+## Apply database migrations
+
+Migrations live in `../../data/migrations/`. Source-of-truth is the live
+Career-Buddy Supabase project (`SUPABASE_DB_URL` in repo-root `.env`).
+
+```bash
+uv run python -m career_buddy_scraper.cli.migrate            # apply all pending
+uv run python -m career_buddy_scraper.cli.migrate FILE.sql   # apply one file
+```
+
+Migrations are tracked in a `_migrations` table inside Supabase, so re-runs
+are no-ops. See [`docs/decisions/0004-supabase-as-source-of-truth.md`](../../docs/decisions/0004-supabase-as-source-of-truth.md) for the rationale.
+
 ## Phases (per `docs/scraper-plan.md`)
 
-- **Phase A** — VC master list. Pull OpenVC + EU-Startups + Signal NFX, dedupe by domain, manual tier classification, capture `careers_url`. Output `data/vc_master_list.json`.
+- **Phase A** — VC master list. Pull OpenVC + EU-Startups + Signal NFX, dedupe by domain, manual tier classification, capture `careers_url`. Upsert into Supabase `vcs` (JSON export at `data/vc_master_list.json` is optional cache).
 - **Phase B** — VC career-page scraper. Build adapters for Greenhouse, Lever, Ashby, Workable. Detector picks ATS per `careers_url`. Daily cron writes to Supabase `jobs` table.
 - **Phase C** — Portfolio scraper. For each VC, scrape its portfolio page → `portfolio_master_list.json`, then run the same ATS adapters across portfolio companies.
 - **Phase D** — Categorization. Tier-1 regex filter for operator-track titles, Tier-2 LLM classifier for ambiguous cases.
