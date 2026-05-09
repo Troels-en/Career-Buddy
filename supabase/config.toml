@@ -2,3 +2,6 @@ project_id = "gxnpfbzfqgbhnyqunuwf"
 
 [functions.analyze-cv]
 verify_jwt = false
+
+[functions.match-job]
+verify_jwt = false

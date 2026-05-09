@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Mail, Loader2, Upload, Pencil, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Mail, Loader2, Upload, Pencil, Plus, Trash2, X, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { extractCvText } from "@/lib/cv-parser";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -81,6 +81,23 @@ type State = {
   profile: Profile;
   sync_completed: boolean;
 };
+
+type MatchResult = {
+  score: number;
+  verdict: "strong" | "moderate" | "weak";
+  matched_skills: string[];
+  missing_skills: string[];
+  experience_match: string;
+  reasons: string[];
+  blockers?: string[];
+  suggestion: string;
+};
+
+type MatchEntry =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "error"; error: string; retryAfterMs?: number }
+  | { status: "ready"; result: MatchResult; profile_signature: string; computed_at: number };
 
 type MockEmail = {
   matches_company: string;
@@ -375,6 +392,71 @@ function fitScore(job: VcJob, profile: Profile, profTokens: Set<string>): { scor
   };
 }
 
+function profileSignature(p: Profile): string {
+  // Stable signature: changes when fitness-affecting fields change.
+  const parts = [
+    p.target_role,
+    p.target_geo,
+    p.background,
+    p.headline,
+    [...p.strengths].sort().join("|"),
+    [...p.target_role_categories].sort().join("|"),
+    [...p.location_preferences].sort().join("|"),
+    p.work_history.map((w) => `${w.company}-${w.role}-${w.bullets.join(";")}`).join("||"),
+  ];
+  // Cheap deterministic hash (FNV-1a-ish, sufficient for cache-key collision avoidance).
+  const blob = parts.join("\n");
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < blob.length; i++) {
+    h ^= blob.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h.toString(16);
+}
+
+const MATCH_CACHE_KEY = "career-buddy-matches-v1";
+const MATCH_QUOTA_KEY = "career-buddy-match-quota-v1";
+const MATCH_QUOTA_COOLDOWN_MS = 4 * 3600 * 1000;
+const MATCH_DAILY_LIMIT = 10;
+
+type MatchCache = Record<string, { result: MatchResult; profile_signature: string; computed_at: number }>;
+
+function loadMatchCache(): MatchCache {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(MATCH_CACHE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as MatchCache;
+  } catch {
+    return {};
+  }
+}
+
+function persistMatchCache(cache: MatchCache) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(MATCH_CACHE_KEY, JSON.stringify(cache));
+  } catch {}
+}
+
+function readQuotaState(): { quotaHitAt: number | null; runs: { date: string; count: number } } {
+  if (typeof window === "undefined") return { quotaHitAt: null, runs: { date: "", count: 0 } };
+  try {
+    const raw = localStorage.getItem(MATCH_QUOTA_KEY);
+    if (!raw) return { quotaHitAt: null, runs: { date: "", count: 0 } };
+    return JSON.parse(raw);
+  } catch {
+    return { quotaHitAt: null, runs: { date: "", count: 0 } };
+  }
+}
+
+function writeQuotaState(state: { quotaHitAt: number | null; runs: { date: string; count: number } }) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(MATCH_QUOTA_KEY, JSON.stringify(state));
+  } catch {}
+}
+
 function fitWhy(job: VcJob, profile: Profile, matched: string[]): string {
   const reasons: string[] = [];
   if (job.role_category && profile.target_role_categories.includes(job.role_category)) {
@@ -412,6 +494,22 @@ export default function CareerBuddy() {
   const [emails, setEmails] = useState<MockEmail[]>([]);
   const [jobs, setJobs] = useState<VcJob[]>([]);
   const [insightsShimmer, setInsightsShimmer] = useState(false);
+  const [matches, setMatches] = useState<Record<string, MatchEntry>>(() => {
+    if (typeof window === "undefined") return {};
+    const cache = loadMatchCache();
+    const out: Record<string, MatchEntry> = {};
+    for (const [k, v] of Object.entries(cache)) {
+      out[k] = { status: "ready", result: v.result, profile_signature: v.profile_signature, computed_at: v.computed_at };
+    }
+    return out;
+  });
+  const [matchQuotaHit, setMatchQuotaHit] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const q = readQuotaState();
+    if (!q.quotaHitAt) return null;
+    if (Date.now() - q.quotaHitAt > MATCH_QUOTA_COOLDOWN_MS) return null;
+    return q.quotaHitAt;
+  });
 
   useEffect(() => {
     if (state.profile.built) setChatReply(CANNED_REPLY);
@@ -636,6 +734,104 @@ export default function CareerBuddy() {
   }
 
   const profTokens = useMemo(() => buildProfileTokens(state.profile), [state.profile]);
+  const profSig = useMemo(() => profileSignature(state.profile), [state.profile]);
+
+  // Persist match cache; evict entries whose profile_signature no longer matches.
+  useEffect(() => {
+    const cache: MatchCache = {};
+    for (const [k, v] of Object.entries(matches)) {
+      if (v.status === "ready" && v.profile_signature === profSig) {
+        cache[k] = { result: v.result, profile_signature: v.profile_signature, computed_at: v.computed_at };
+      }
+    }
+    persistMatchCache(cache);
+  }, [matches, profSig]);
+
+  const matchesUsedToday = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    let n = 0;
+    for (const v of Object.values(matches)) {
+      if (v.status === "ready" && v.computed_at && new Date(v.computed_at).toISOString().slice(0, 10) === today) n++;
+    }
+    return n;
+  }, [matches]);
+
+  // Sequential queue: only one in-flight match-job request at a time.
+  const matchQueueRef = useRef<Array<{ key: string; job: VcJob }>>([]);
+  const matchInFlightRef = useRef(false);
+
+  async function runOne(key: string, job: VcJob) {
+    setMatches((m) => ({ ...m, [key]: { status: "loading" } }));
+    try {
+      const { data, error } = await supabase.functions.invoke("match-job", {
+        body: {
+          profile: {
+            name: state.profile.name,
+            headline: state.profile.headline,
+            target_role: state.profile.target_role,
+            target_geo: state.profile.target_geo,
+            background: state.profile.background,
+            strengths: state.profile.strengths,
+            work_history: state.profile.work_history,
+            education: state.profile.education,
+          },
+          job: {
+            company: job.company,
+            role: job.role,
+            location: job.location,
+            description: job.description ?? "",
+            requirements: job.requirements ?? "",
+          },
+        },
+      });
+      if (error) throw error;
+      const payload = data as { match?: MatchResult; error?: string };
+      if (!payload?.match) {
+        const errMsg = payload?.error || "No match returned";
+        if (/quota/i.test(errMsg)) {
+          const now = Date.now();
+          setMatchQuotaHit(now);
+          writeQuotaState({ quotaHitAt: now, runs: { date: new Date().toISOString().slice(0, 10), count: 0 } });
+        }
+        throw new Error(errMsg);
+      }
+      setMatches((m) => ({
+        ...m,
+        [key]: { status: "ready", result: payload.match!, profile_signature: profSig, computed_at: Date.now() },
+      }));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Match failed";
+      setMatches((m) => ({ ...m, [key]: { status: "error", error: msg } }));
+    }
+  }
+
+  async function pumpMatchQueue() {
+    if (matchInFlightRef.current) return;
+    const next = matchQueueRef.current.shift();
+    if (!next) return;
+    matchInFlightRef.current = true;
+    try {
+      await runOne(next.key, next.job);
+    } finally {
+      matchInFlightRef.current = false;
+      // Continue draining the queue.
+      void pumpMatchQueue();
+    }
+  }
+
+  function requestMatch(job: VcJob) {
+    const key = job.url;
+    const existing = matches[key];
+    if (existing && (existing.status === "loading" || existing.status === "ready")) return;
+    if (matchQuotaHit && Date.now() - matchQuotaHit < MATCH_QUOTA_COOLDOWN_MS) return;
+    if (matchesUsedToday >= MATCH_DAILY_LIMIT) return;
+    if (!job.description && !job.requirements) {
+      setMatches((m) => ({ ...m, [key]: { status: "error", error: "Job has no description to analyse." } }));
+      return;
+    }
+    matchQueueRef.current.push({ key, job });
+    void pumpMatchQueue();
+  }
 
   const rankedJobs: ScoredJob[] = useMemo(() => {
     return jobs
@@ -782,43 +978,34 @@ export default function CareerBuddy() {
               ? "Loading live openings…"
               : `${rankedJobs.length} live openings, ranked by your profile + CV.`}
           </p>
+          {matchQuotaHit && Date.now() - matchQuotaHit < MATCH_QUOTA_COOLDOWN_MS && (
+            <div className="mb-4 text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+              AI fit-analysis paused — Gemini free quota hit. Resuming around midnight Pacific time.
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {rankedJobs.map((j, idx) => {
               const isTop = idx < 3 && j.fit >= 7.0 && j.fit >= topThreshold;
+              const matchEntry = matches[j.url];
+              const matchDisabled = !!(matchQuotaHit && Date.now() - matchQuotaHit < MATCH_QUOTA_COOLDOWN_MS) || matchesUsedToday >= MATCH_DAILY_LIMIT;
               return (
-                <a
+                <JobCard
                   key={`${j.company}-${j.role}-${j.url}`}
-                  href={j.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`relative block bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition no-underline ${isTop ? "ring-2 ring-purple-500/60" : ""}`}
-                >
-                  <div className={`absolute top-3 right-3 text-sm font-bold ${fitColor(j.fit)}`}>{j.fit.toFixed(1)}</div>
-                  <div className="font-semibold text-base text-[#111827] pr-10">{j.company}</div>
-                  <div className="text-sm text-[#111827]">{j.role}</div>
-                  <div className="text-xs text-gray-500">{j.location}</div>
-                  <div className="mt-2 flex items-center gap-2 text-[10px]">
-                    <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase tracking-wide">{j.ats_source}</span>
-                    {j.role_category && j.role_category !== "other" && (
-                      <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">{j.role_category}</span>
-                    )}
-                    <span className="text-gray-400">{relativeDays(j.posted_date)}</span>
-                  </div>
-                  <div className="text-xs mt-3 text-gray-600">{j.why}</div>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      addApplication(j.company, j.role);
-                    }}
-                    className="mt-4 text-xs px-3 py-1 border rounded-lg"
-                    style={{ borderColor: "#7c3aed", color: "#7c3aed" }}
-                  >
-                    Add to tracker
-                  </button>
-                </a>
+                  job={j}
+                  isTop={isTop}
+                  matchEntry={matchEntry}
+                  matchDisabled={matchDisabled}
+                  onAnalyze={() => requestMatch(j)}
+                  onAdd={() => addApplication(j.company, j.role)}
+                />
               );
             })}
           </div>
+          {state.profile.cv_analyzed && rankedJobs.length > 0 && (
+            <div className="mt-4 text-xs text-gray-500">
+              AI fit-analysis used today: {matchesUsedToday}/{MATCH_DAILY_LIMIT}
+            </div>
+          )}
         </section>
       </main>
 
@@ -1419,6 +1606,151 @@ function PositionEditor({
       <button type="button" onClick={onRemove} className="text-xs text-red-600 flex items-center gap-1 hover:underline">
         <Trash2 className="w-3.5 h-3.5" /> Remove position
       </button>
+    </div>
+  );
+}
+
+function JobCard({
+  job,
+  isTop,
+  matchEntry,
+  matchDisabled,
+  onAnalyze,
+  onAdd,
+}: {
+  job: ScoredJob;
+  isTop: boolean;
+  matchEntry: MatchEntry | undefined;
+  matchDisabled: boolean;
+  onAnalyze: () => void;
+  onAdd: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const status = matchEntry?.status ?? "idle";
+  const isReady = status === "ready";
+  const result = isReady ? (matchEntry as { result: MatchResult }).result : null;
+  const showPanel = expanded && (status === "ready" || status === "loading" || status === "error");
+
+  return (
+    <div className={`relative bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition ${isTop ? "ring-2 ring-purple-500/60" : ""}`}>
+      <div className={`absolute top-3 right-3 text-sm font-bold ${fitColor(job.fit)}`}>{job.fit.toFixed(1)}</div>
+      <a
+        href={job.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block no-underline text-[#111827] hover:underline decoration-purple-300"
+      >
+        <div className="font-semibold text-base pr-10">{job.company}</div>
+        <div className="text-sm">{job.role}</div>
+        <div className="text-xs text-gray-500 no-underline">{job.location}</div>
+      </a>
+      <div className="mt-2 flex items-center gap-2 text-[10px]">
+        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase tracking-wide">{job.ats_source}</span>
+        {job.role_category && job.role_category !== "other" && (
+          <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">{job.role_category}</span>
+        )}
+        <span className="text-gray-400">{relativeDays(job.posted_date)}</span>
+      </div>
+      <div className="text-xs mt-3 text-gray-600">{job.why}</div>
+
+      <div className="mt-4 flex items-center gap-2 flex-wrap">
+        <button
+          onClick={onAdd}
+          className="text-xs px-3 py-1 border rounded-lg"
+          style={{ borderColor: "#7c3aed", color: "#7c3aed" }}
+        >
+          Add to tracker
+        </button>
+        {status === "idle" && (
+          <button
+            onClick={() => {
+              onAnalyze();
+              setExpanded(true);
+            }}
+            disabled={matchDisabled}
+            className="text-xs px-3 py-1 rounded-lg flex items-center gap-1 bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={matchDisabled ? "AI quota for today reached" : "Run an AI fit analysis"}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Analyze fit
+          </button>
+        )}
+        {(status === "ready" || status === "loading" || status === "error") && (
+          <button
+            onClick={() => setExpanded((e) => !e)}
+            className="text-xs px-3 py-1 rounded-lg flex items-center gap-1 border border-purple-200 text-purple-700 hover:bg-purple-50"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {status === "loading" ? "Analyzing…" : status === "error" ? "Match failed — view" : `AI score ${result!.score.toFixed(1)}`}
+            {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+        )}
+      </div>
+
+      {showPanel && (
+        <div className="mt-3 border-t pt-3 text-xs space-y-2">
+          {status === "loading" && (
+            <div className="flex items-center gap-2 text-gray-500">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Asking Gemini…
+            </div>
+          )}
+          {status === "error" && matchEntry?.status === "error" && (
+            <div className="text-red-600">{matchEntry.error}</div>
+          )}
+          {status === "ready" && result && (
+            <>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-semibold ${fitColor(result.score)}`}>{result.score.toFixed(1)}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wide ${
+                  result.verdict === "strong" ? "bg-green-100 text-green-700"
+                    : result.verdict === "moderate" ? "bg-yellow-100 text-yellow-700"
+                    : "bg-red-100 text-red-700"
+                }`}>{result.verdict}</span>
+                <span className="text-gray-500">{result.experience_match}</span>
+              </div>
+              {result.reasons.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">Why</div>
+                  <ul className="list-disc pl-4 space-y-0.5 text-gray-700">
+                    {result.reasons.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                </div>
+              )}
+              {result.matched_skills.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">Matched</div>
+                  <div className="flex flex-wrap gap-1">
+                    {result.matched_skills.map((s, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded-full bg-green-50 text-green-700">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {result.missing_skills.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">Missing</div>
+                  <div className="flex flex-wrap gap-1">
+                    {result.missing_skills.map((s, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded-full bg-red-50 text-red-700">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {result.blockers && result.blockers.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">Blockers</div>
+                  <ul className="list-disc pl-4 space-y-0.5 text-red-700">
+                    {result.blockers.map((b, i) => <li key={i}>{b}</li>)}
+                  </ul>
+                </div>
+              )}
+              {result.suggestion && (
+                <div className="text-gray-700 italic">→ {result.suggestion}</div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
