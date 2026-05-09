@@ -80,6 +80,25 @@ type State = {
   applications: Application[];
   profile: Profile;
   sync_completed: boolean;
+  dismissed_urls: string[];
+};
+
+type Filters = {
+  roleCats: string[];
+  atsSources: string[];
+  locationQuery: string;
+  postedSince: "any" | "today" | "week" | "month";
+  remoteOnly: boolean;
+  hideRemote: boolean;
+};
+
+const DEFAULT_FILTERS: Filters = {
+  roleCats: [],
+  atsSources: [],
+  locationQuery: "",
+  postedSince: "any",
+  remoteOnly: false,
+  hideRemote: false,
 };
 
 type MatchResult = {
@@ -256,6 +275,7 @@ function emptyState(): State {
     applications: SEED_APPS,
     profile: { ...DEFAULT_PROFILE },
     sync_completed: false,
+    dismissed_urls: [],
   };
 }
 
@@ -298,6 +318,9 @@ function loadState(): State {
       applications: Array.isArray(parsed.applications) && parsed.applications.length > 0 ? parsed.applications : SEED_APPS,
       profile: migrateProfile(parsed.profile),
       sync_completed: parsed.sync_completed === true,
+      dismissed_urls: Array.isArray((parsed as { dismissed_urls?: unknown }).dismissed_urls)
+        ? ((parsed as { dismissed_urls: unknown[] }).dismissed_urls.filter((x) => typeof x === "string") as string[])
+        : [],
     };
   } catch {
     return emptyState();
@@ -392,6 +415,98 @@ function fitScore(job: VcJob, profile: Profile, profTokens: Set<string>): { scor
   };
 }
 
+function serializeFilters(f: Filters): string {
+  const params = new URLSearchParams();
+  if (f.roleCats.length) params.set("cats", f.roleCats.join(","));
+  if (f.atsSources.length) params.set("ats", f.atsSources.join(","));
+  if (f.locationQuery.trim()) params.set("loc", f.locationQuery.trim());
+  if (f.postedSince !== "any") params.set("since", f.postedSince);
+  if (f.remoteOnly) params.set("remote", "1");
+  if (f.hideRemote) params.set("hide_remote", "1");
+  return params.toString();
+}
+
+function parseFiltersFromHash(hash: string): Filters {
+  const out = { ...DEFAULT_FILTERS };
+  if (!hash || hash.length < 2) return out;
+  const trimmed = hash.startsWith("#") ? hash.slice(1) : hash;
+  const params = new URLSearchParams(trimmed);
+  const cats = params.get("cats");
+  if (cats) out.roleCats = cats.split(",").filter(Boolean);
+  const ats = params.get("ats");
+  if (ats) out.atsSources = ats.split(",").filter(Boolean);
+  const loc = params.get("loc");
+  if (loc) out.locationQuery = loc;
+  const since = params.get("since");
+  if (since === "today" || since === "week" || since === "month") out.postedSince = since;
+  if (params.get("remote") === "1") out.remoteOnly = true;
+  if (params.get("hide_remote") === "1") out.hideRemote = true;
+  return out;
+}
+
+function countActiveFilters(f: Filters): number {
+  let n = 0;
+  if (f.roleCats.length > 0) n++;
+  if (f.atsSources.length > 0) n++;
+  if (f.locationQuery.trim()) n++;
+  if (f.postedSince !== "any") n++;
+  if (f.remoteOnly) n++;
+  if (f.hideRemote) n++;
+  return n;
+}
+
+function profileCompleteness(profile: Profile): { score: number; done: number; total: number } {
+  const checks = [
+    profile.name.trim(),
+    profile.headline.trim(),
+    profile.target_role.trim(),
+    profile.target_geo.trim(),
+    profile.background.trim(),
+    profile.strengths.length > 0,
+    profile.target_role_categories.length > 0,
+    profile.location_preferences.length > 0,
+    profile.cv_analyzed,
+    profile.work_history.length > 0,
+    profile.education.length > 0,
+  ];
+  const done = checks.filter(Boolean).length;
+  return { score: Math.round((done / checks.length) * 100), done, total: checks.length };
+}
+
+function cleanSnippet(text: string | null): string {
+  if (!text) return "";
+  return text.replace(/\s+/g, " ").trim().slice(0, 300);
+}
+
+function applyFilters(jobs: VcJob[], f: Filters, dismissed: Set<string>): VcJob[] {
+  const locQ = f.locationQuery.trim().toLowerCase();
+  const now = Date.now();
+  const sinceMs =
+    f.postedSince === "today" ? 86_400_000
+    : f.postedSince === "week" ? 7 * 86_400_000
+    : f.postedSince === "month" ? 30 * 86_400_000
+    : 0;
+  return jobs.filter((j) => {
+    if (dismissed.has(j.url)) return false;
+    if (f.roleCats.length > 0) {
+      if (!j.role_category || !f.roleCats.includes(j.role_category)) return false;
+    }
+    if (f.atsSources.length > 0) {
+      if (!f.atsSources.includes(j.ats_source)) return false;
+    }
+    if (locQ && !(j.location || "").toLowerCase().includes(locQ)) return false;
+    if (f.remoteOnly && !j.is_remote) return false;
+    if (f.hideRemote && j.is_remote) return false;
+    if (sinceMs && j.posted_date) {
+      const age = now - new Date(j.posted_date).getTime();
+      if (age > sinceMs) return false;
+    } else if (sinceMs && !j.posted_date) {
+      return false;
+    }
+    return true;
+  });
+}
+
 function profileSignature(p: Profile): string {
   // Stable signature: changes when fitness-affecting fields change.
   const parts = [
@@ -479,7 +594,8 @@ function fitWhy(job: VcJob, profile: Profile, matched: string[]): string {
 }
 
 export default function CareerBuddy() {
-  const [state, setState] = useState<State>(() => loadState());
+  const [state, setState] = useState<State>(emptyState);
+  const [hydrated, setHydrated] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [chatReply, setChatReply] = useState<string | null>(null);
@@ -494,36 +610,114 @@ export default function CareerBuddy() {
   const [emails, setEmails] = useState<MockEmail[]>([]);
   const [jobs, setJobs] = useState<VcJob[]>([]);
   const [insightsShimmer, setInsightsShimmer] = useState(false);
-  const [matches, setMatches] = useState<Record<string, MatchEntry>>(() => {
-    if (typeof window === "undefined") return {};
+  const [matches, setMatches] = useState<Record<string, MatchEntry>>({});
+  const [matchQuotaHit, setMatchQuotaHit] = useState<number | null>(null);
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersHydrated, setFiltersHydrated] = useState(false);
+
+  // Hydrate browser-only caches after mount to avoid SSR/CSR mismatch.
+  useEffect(() => {
+    setState(loadState());
     const cache = loadMatchCache();
     const out: Record<string, MatchEntry> = {};
     for (const [k, v] of Object.entries(cache)) {
       out[k] = { status: "ready", result: v.result, profile_signature: v.profile_signature, computed_at: v.computed_at };
     }
-    return out;
-  });
-  const [matchQuotaHit, setMatchQuotaHit] = useState<number | null>(() => {
-    if (typeof window === "undefined") return null;
+    setMatches(out);
     const q = readQuotaState();
-    if (!q.quotaHitAt) return null;
-    if (Date.now() - q.quotaHitAt > MATCH_QUOTA_COOLDOWN_MS) return null;
-    return q.quotaHitAt;
-  });
+    if (q.quotaHitAt && Date.now() - q.quotaHitAt <= MATCH_QUOTA_COOLDOWN_MS) {
+      setMatchQuotaHit(q.quotaHitAt);
+    }
+    setHydrated(true);
+  }, []);
+
+  // Hydrate filters from URL hash on mount; sync on change.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setFilters(parseFiltersFromHash(window.location.hash));
+    setFiltersHydrated(true);
+    function onHashChange() {
+      setFilters(parseFiltersFromHash(window.location.hash));
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   useEffect(() => {
-    if (state.profile.built) setChatReply(CANNED_REPLY);
-  }, []); // eslint-disable-line
+    if (!filtersHydrated) return;
+    if (typeof window === "undefined") return;
+    const next = serializeFilters(filters);
+    const target = next ? `#${next}` : "";
+    if (window.location.hash !== target) {
+      // Avoid stacking history entries for incremental filter changes.
+      const newUrl = `${window.location.pathname}${window.location.search}${target}`;
+      window.history.replaceState(null, "", newUrl);
+    }
+  }, [filters, filtersHydrated]);
+
+  const dismissedSet = useMemo(() => new Set(state.dismissed_urls), [state.dismissed_urls]);
+
+  function dismissJob(url: string) {
+    setState((s) => (s.dismissed_urls.includes(url) ? s : { ...s, dismissed_urls: [...s.dismissed_urls, url] }));
+    void supabase
+      .from("job_dismissals")
+      .upsert({ url }, { onConflict: "url" })
+      .then(({ error }) => {
+        if (error) console.error("[job_dismissals] upsert failed", error);
+      });
+  }
+  function undoDismiss(url: string) {
+    setState((s) => ({ ...s, dismissed_urls: s.dismissed_urls.filter((u) => u !== url) }));
+    void supabase
+      .from("job_dismissals")
+      .delete()
+      .eq("url", url)
+      .then(({ error }) => {
+        if (error) console.error("[job_dismissals] delete failed", error);
+      });
+  }
+  function clearDismissed() {
+    const urls = state.dismissed_urls;
+    setState((s) => ({ ...s, dismissed_urls: [] }));
+    if (urls.length > 0) {
+      void supabase
+        .from("job_dismissals")
+        .delete()
+        .in("url", urls)
+        .then(({ error }) => {
+          if (error) console.error("[job_dismissals] clear failed", error);
+        });
+    }
+  }
 
   useEffect(() => {
+    if (hydrated && state.profile.built) setChatReply(CANNED_REPLY);
+  }, [hydrated, state.profile.built]);
+
+  useEffect(() => {
+    if (!hydrated) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {}
-  }, [state]);
+  }, [state, hydrated]);
 
   useEffect(() => {
     fetch("/data/mock_emails.json").then((r) => r.json()).then(setEmails).catch(() => {});
     void (async () => {
+      const { data: dismissedRows, error: dismissedError } = await supabase
+        .from("job_dismissals")
+        .select("url");
+      if (dismissedError) {
+        console.error("[job_dismissals] fetch failed", dismissedError);
+      } else {
+        const urls = (dismissedRows ?? []).map((r) => r.url).filter(Boolean);
+        setState((s) => {
+          const merged = Array.from(new Set([...s.dismissed_urls, ...urls]));
+          return merged.length === s.dismissed_urls.length ? s : { ...s, dismissed_urls: merged };
+        });
+      }
+
       const { data, error } = await supabase
         .from("jobs")
         .select("company_name, role_title, role_category, location, url, ats_source, posted_date, is_remote, description, requirements")
@@ -738,6 +932,7 @@ export default function CareerBuddy() {
 
   // Persist match cache; evict entries whose profile_signature no longer matches.
   useEffect(() => {
+    if (!hydrated) return;
     const cache: MatchCache = {};
     for (const [k, v] of Object.entries(matches)) {
       if (v.status === "ready" && v.profile_signature === profSig) {
@@ -745,7 +940,7 @@ export default function CareerBuddy() {
       }
     }
     persistMatchCache(cache);
-  }, [matches, profSig]);
+  }, [matches, profSig, hydrated]);
 
   const matchesUsedToday = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -833,8 +1028,10 @@ export default function CareerBuddy() {
     void pumpMatchQueue();
   }
 
+  const filteredJobs = useMemo(() => applyFilters(jobs, filters, dismissedSet), [jobs, filters, dismissedSet]);
+
   const rankedJobs: ScoredJob[] = useMemo(() => {
-    return jobs
+    return filteredJobs
       .map((j) => {
         const { score, matched } = fitScore(j, state.profile, profTokens);
         return {
@@ -851,7 +1048,7 @@ export default function CareerBuddy() {
         return bd - ad;
       })
       .slice(0, 30);
-  }, [jobs, state.profile, profTokens]);
+  }, [filteredJobs, state.profile, profTokens]);
 
   const topThreshold = rankedJobs[2]?.fit ?? 0;
 
@@ -973,11 +1170,40 @@ export default function CareerBuddy() {
 
         <section className="py-8">
           <h2 className="text-2xl font-semibold mb-1">Roles you might fit</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            {rankedJobs.length === 0
-              ? "Loading live openings…"
-              : `${rankedJobs.length} live openings, ranked by your profile + CV.`}
-          </p>
+          <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+            <p className="text-sm text-gray-500">
+              {jobs.length === 0
+                ? "Loading live openings…"
+                : `Showing ${rankedJobs.length} of ${jobs.length} live openings, ranked by profile + CV.`}
+            </p>
+            <div className="flex items-center gap-3 text-xs">
+              {state.dismissed_urls.length > 0 && (
+                <button onClick={clearDismissed} className="text-gray-500 underline hover:text-gray-700">
+                  show {state.dismissed_urls.length} dismissed
+                </button>
+              )}
+              <button
+                onClick={() => setFiltersOpen((o) => !o)}
+                className="px-3 py-1.5 border rounded-lg flex items-center gap-1 text-gray-700 hover:bg-gray-50"
+              >
+                Filters
+                {countActiveFilters(filters) > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full bg-purple-600 text-white">
+                    {countActiveFilters(filters)}
+                  </span>
+                )}
+                {filtersOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+          {filtersOpen && (
+            <FilterBar
+              filters={filters}
+              onChange={setFilters}
+              onReset={() => setFilters(DEFAULT_FILTERS)}
+              jobs={jobs}
+            />
+          )}
           {matchQuotaHit && Date.now() - matchQuotaHit < MATCH_QUOTA_COOLDOWN_MS && (
             <div className="mb-4 text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
               AI fit-analysis paused — Gemini free quota hit. Resuming around midnight Pacific time.
@@ -997,6 +1223,7 @@ export default function CareerBuddy() {
                   matchDisabled={matchDisabled}
                   onAnalyze={() => requestMatch(j)}
                   onAdd={() => addApplication(j.company, j.role)}
+                  onDismiss={() => dismissJob(j.url)}
                 />
               );
             })}
@@ -1047,13 +1274,17 @@ function ProfileCard({
   syncCompleted: boolean;
 }) {
   const collapsed = profile.collapsed && syncCompleted;
+  const completeness = profileCompleteness(profile);
 
   if (collapsed) {
     return (
       <div className="mt-4 flex items-center justify-between bg-gray-50 rounded-lg p-3 text-sm">
-        <span>
-          {profile.name || "Profile"} · {profile.target_role} · {profile.target_geo}
-        </span>
+        <div className="min-w-0 flex-1 pr-4">
+          <div className="truncate">
+            {profile.name || "Profile"} · {profile.target_role} · {profile.target_geo}
+          </div>
+          <CompletenessMeter completeness={completeness} compact />
+        </div>
         <div className="flex items-center gap-3">
           <button onClick={onEdit} className="text-xs underline" style={{ color: "#7c3aed" }}>
             edit profile
@@ -1070,6 +1301,7 @@ function ProfileCard({
     <div className="mt-4 bg-gray-50 rounded-lg p-4 text-sm space-y-1">
       <div className="flex items-start justify-between mb-1">
         <div className="space-y-1 flex-1">
+          <CompletenessMeter completeness={completeness} />
           <ProfileLine label="Name" value={profile.name || "—"} />
           <ProfileLine label="Target Role" value={profile.target_role} />
           <ProfileLine label="Target Geo" value={profile.target_geo} />
@@ -1132,6 +1364,31 @@ function ProfileLine({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <span className="text-gray-500 w-28 inline-block">{label}:</span> {value}
+    </div>
+  );
+}
+
+function CompletenessMeter({
+  completeness,
+  compact,
+}: {
+  completeness: { score: number; done: number; total: number };
+  compact?: boolean;
+}) {
+  return (
+    <div className={compact ? "mt-2 max-w-xs" : "mb-3 max-w-md"}>
+      <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
+        <span>Profile completeness</span>
+        <span>
+          {completeness.score}% · {completeness.done}/{completeness.total}
+        </span>
+      </div>
+      <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-purple-600 transition-all"
+          style={{ width: `${completeness.score}%` }}
+        />
+      </div>
     </div>
   );
 }
@@ -1617,6 +1874,7 @@ function JobCard({
   matchDisabled,
   onAnalyze,
   onAdd,
+  onDismiss,
 }: {
   job: ScoredJob;
   isTop: boolean;
@@ -1624,16 +1882,33 @@ function JobCard({
   matchDisabled: boolean;
   onAnalyze: () => void;
   onAdd: () => void;
+  onDismiss: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [showSnippet, setShowSnippet] = useState(false);
   const status = matchEntry?.status ?? "idle";
   const isReady = status === "ready";
   const result = isReady ? (matchEntry as { result: MatchResult }).result : null;
   const showPanel = expanded && (status === "ready" || status === "loading" || status === "error");
+  const snippet = cleanSnippet(job.description);
 
   return (
-    <div className={`relative bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition ${isTop ? "ring-2 ring-purple-500/60" : ""}`}>
-      <div className={`absolute top-3 right-3 text-sm font-bold ${fitColor(job.fit)}`}>{job.fit.toFixed(1)}</div>
+    <div
+      className={`relative bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition ${isTop ? "ring-2 ring-purple-500/60" : ""}`}
+      onMouseEnter={() => setShowSnippet(true)}
+      onMouseLeave={() => setShowSnippet(false)}
+    >
+      <div className="absolute top-2 right-2 flex items-center gap-2">
+        <button
+          onClick={onDismiss}
+          aria-label="Dismiss"
+          title="Hide this job"
+          className="text-gray-300 hover:text-gray-600 p-1"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+        <div className={`text-sm font-bold ${fitColor(job.fit)}`}>{job.fit.toFixed(1)}</div>
+      </div>
       <a
         href={job.url}
         target="_blank"
@@ -1652,6 +1927,12 @@ function JobCard({
         <span className="text-gray-400">{relativeDays(job.posted_date)}</span>
       </div>
       <div className="text-xs mt-3 text-gray-600">{job.why}</div>
+      {showSnippet && snippet && (
+        <div className="pointer-events-none absolute left-4 right-4 top-24 z-30 rounded-lg border bg-white p-3 text-[11px] leading-relaxed text-gray-600 shadow-lg">
+          {snippet}
+          {job.description && job.description.length > snippet.length ? "..." : ""}
+        </div>
+      )}
 
       <div className="mt-4 flex items-center gap-2 flex-wrap">
         <button
@@ -1751,6 +2032,132 @@ function JobCard({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function FilterBar({
+  filters,
+  onChange,
+  onReset,
+  jobs,
+}: {
+  filters: Filters;
+  onChange: (f: Filters) => void;
+  onReset: () => void;
+  jobs: VcJob[];
+}) {
+  const atsCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const j of jobs) m.set(j.ats_source, (m.get(j.ats_source) ?? 0) + 1);
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [jobs]);
+
+  const catCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const j of jobs) {
+      if (j.role_category) m.set(j.role_category, (m.get(j.role_category) ?? 0) + 1);
+    }
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [jobs]);
+
+  function toggleArr(arr: string[], v: string): string[] {
+    return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
+  }
+
+  return (
+    <div className="border rounded-xl bg-gray-50 p-4 mb-4 space-y-4">
+      <div>
+        <div className="text-xs font-medium text-gray-600 mb-2">Role category</div>
+        <div className="flex flex-wrap gap-2">
+          {ROLE_CATEGORY_OPTIONS.map((cat) => {
+            const on = filters.roleCats.includes(cat);
+            const count = catCounts.find(([c]) => c === cat)?.[1] ?? 0;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => onChange({ ...filters, roleCats: toggleArr(filters.roleCats, cat) })}
+                className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-purple-600 border-purple-600 text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
+              >
+                {cat} <span className="opacity-60">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <div className="text-xs font-medium text-gray-600 mb-2">Location contains</div>
+          <input
+            type="text"
+            placeholder="e.g. Berlin, Remote"
+            value={filters.locationQuery}
+            onChange={(e) => onChange({ ...filters, locationQuery: e.target.value })}
+            className="w-full border rounded-lg px-3 py-1.5 text-sm bg-white"
+          />
+        </div>
+        <div>
+          <div className="text-xs font-medium text-gray-600 mb-2">Posted</div>
+          <select
+            value={filters.postedSince}
+            onChange={(e) => onChange({ ...filters, postedSince: e.target.value as Filters["postedSince"] })}
+            className="w-full border rounded-lg px-3 py-1.5 text-sm bg-white"
+          >
+            <option value="any">Any time</option>
+            <option value="today">Today</option>
+            <option value="week">This week</option>
+            <option value="month">This month</option>
+          </select>
+        </div>
+        <div>
+          <div className="text-xs font-medium text-gray-600 mb-2">Remote</div>
+          <div className="flex gap-3">
+            <label className="flex items-center gap-1 text-xs text-gray-700">
+              <input
+                type="checkbox"
+                checked={filters.remoteOnly}
+                onChange={(e) => onChange({ ...filters, remoteOnly: e.target.checked, hideRemote: e.target.checked ? false : filters.hideRemote })}
+              />
+              Remote only
+            </label>
+            <label className="flex items-center gap-1 text-xs text-gray-700">
+              <input
+                type="checkbox"
+                checked={filters.hideRemote}
+                onChange={(e) => onChange({ ...filters, hideRemote: e.target.checked, remoteOnly: e.target.checked ? false : filters.remoteOnly })}
+              />
+              Hide remote
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs font-medium text-gray-600 mb-2">ATS source</div>
+        <div className="flex flex-wrap gap-2">
+          {atsCounts.map(([src, count]) => {
+            const on = filters.atsSources.includes(src);
+            return (
+              <button
+                key={src}
+                type="button"
+                onClick={() => onChange({ ...filters, atsSources: toggleArr(filters.atsSources, src) })}
+                className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-purple-600 border-purple-600 text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
+              >
+                {src} <span className="opacity-60">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex justify-end pt-1">
+        <button onClick={onReset} className="text-xs text-gray-600 underline hover:text-gray-800">
+          Reset filters
+        </button>
+      </div>
     </div>
   );
 }

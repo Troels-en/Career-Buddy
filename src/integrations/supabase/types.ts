@@ -1,6 +1,3 @@
-Resolving dependencies
-Resolved, downloaded and extracted [90]
-Saved lockfile
 export type Json =
   | string
   | number
@@ -122,6 +119,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      job_dismissals: {
+        Row: {
+          dismissed_at: string | null
+          url: string
+        }
+        Insert: {
+          dismissed_at?: string | null
+          url: string
+        }
+        Update: {
+          dismissed_at?: string | null
+          url?: string
+        }
+        Relationships: []
       }
       jobs: {
         Row: {
@@ -447,4 +459,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-<claude-code-hint v="1" type="plugin" value="supabase@claude-plugins-official" />
