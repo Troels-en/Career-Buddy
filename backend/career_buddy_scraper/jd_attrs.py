@@ -95,7 +95,9 @@ _SALARY_RANGE_RE = re.compile(
 )
 _SALARY_SINGLE_RE = re.compile(
     r"""
-    (?:up\s+to|bis\s+zu|salary[:\s]+)
+    (?:salary|compensation|gehalt|gehaltsband|base\s+salary|annual\s+salary)
+    [\s:\-—–]+
+    (?:up\s+to|bis\s+zu)?
     \s*
     (?P<currency>[\$€£]|EUR|USD|GBP|CHF)?
     \s*
@@ -123,6 +125,10 @@ def extract_salary(text: str) -> tuple[int | None, int | None, str | None]:
         cur = _normalise_currency(m2.group("currency"))
         v = _parse_salary_amount(m2.group("value"), text, m2.start("value"), m2.end("value"))
         if v is not None and 10_000 <= v <= 1_000_000:
+            # Be conservative: if no currency anywhere in the matched window, skip.
+            window = text[max(0, m2.start() - 20) : m2.end() + 20]
+            if cur is None and not re.search(r"[\$€£]|EUR|USD|GBP|CHF", window):
+                return None, None, None
             return v, None, cur
     return None, None, None
 

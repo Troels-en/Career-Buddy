@@ -71,10 +71,16 @@ def test_salary_euro_k_suffix() -> None:
 
 
 def test_salary_up_to_phrasing() -> None:
-    sal_min, sal_max, cur = extract_salary("Compensation up to €120k")
+    sal_min, sal_max, cur = extract_salary("Compensation: up to €120k")
     assert sal_min == 120000
     assert sal_max is None
     assert cur == "EUR"
+
+
+def test_salary_rejects_unanchored_k_number() -> None:
+    # "up to 20k users" is NOT a salary signal; require salary/comp prefix + currency context.
+    assert extract_salary("Sumup serves up to 20k merchants in Germany") == (None, None, None)
+    assert extract_salary("Team of 30k+ people across regions") == (None, None, None)
 
 
 def test_salary_no_match_when_absent() -> None:
