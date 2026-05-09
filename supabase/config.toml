@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.match-job]
 verify_jwt = false
+
+[functions.draft-message]
+verify_jwt = false
