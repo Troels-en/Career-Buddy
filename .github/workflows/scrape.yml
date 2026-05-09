@@ -36,6 +36,9 @@ jobs:
       - name: Backfill descriptions from raw payloads
         run: uv run python -m career_buddy_scraper.cli.backfill_descriptions
 
+      - name: Enrich structured JD attrs (years, salary, languages)
+        run: uv run python -m career_buddy_scraper.cli.enrich_jobs
+
       - name: Upload run artifacts
         if: always()
         uses: actions/upload-artifact@v4

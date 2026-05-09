@@ -90,6 +90,8 @@ type Filters = {
   postedSince: "any" | "today" | "week" | "month";
   remoteOnly: boolean;
   hideRemote: boolean;
+  languages: string[];
+  maxYearsRequired: number | null;
 };
 
 const DEFAULT_FILTERS: Filters = {
@@ -99,6 +101,8 @@ const DEFAULT_FILTERS: Filters = {
   postedSince: "any",
   remoteOnly: false,
   hideRemote: false,
+  languages: [],
+  maxYearsRequired: null,
 };
 
 type MatchResult = {
@@ -483,6 +487,8 @@ function serializeFilters(f: Filters): string {
   if (f.postedSince !== "any") params.set("since", f.postedSince);
   if (f.remoteOnly) params.set("remote", "1");
   if (f.hideRemote) params.set("hide_remote", "1");
+  if (f.languages.length) params.set("langs", f.languages.join(","));
+  if (f.maxYearsRequired !== null) params.set("max_years", String(f.maxYearsRequired));
   return params.toString();
 }
 
@@ -501,6 +507,10 @@ function parseFiltersFromHash(hash: string): Filters {
   if (since === "today" || since === "week" || since === "month") out.postedSince = since;
   if (params.get("remote") === "1") out.remoteOnly = true;
   if (params.get("hide_remote") === "1") out.hideRemote = true;
+  const langs = params.get("langs");
+  if (langs) out.languages = langs.split(",").filter(Boolean);
+  const maxY = params.get("max_years");
+  if (maxY && /^\d+$/.test(maxY)) out.maxYearsRequired = parseInt(maxY, 10);
   return out;
 }
 
@@ -512,6 +522,8 @@ function countActiveFilters(f: Filters): number {
   if (f.postedSince !== "any") n++;
   if (f.remoteOnly) n++;
   if (f.hideRemote) n++;
+  if (f.languages.length > 0) n++;
+  if (f.maxYearsRequired !== null) n++;
   return n;
 }
 
@@ -561,6 +573,17 @@ function applyFilters(jobs: VcJob[], f: Filters, dismissed: Set<string>): VcJob[
       const age = now - new Date(j.posted_date).getTime();
       if (age > sinceMs) return false;
     } else if (sinceMs && !j.posted_date) {
+      return false;
+    }
+    if (f.languages.length > 0) {
+      // Match if the JD requires any of the selected languages OR the JD doesn't specify.
+      if (j.languages_required.length > 0) {
+        const requiredLower = j.languages_required.map((l) => l.toLowerCase());
+        const wantsLower = f.languages.map((l) => l.toLowerCase());
+        if (!wantsLower.some((w) => requiredLower.includes(w))) return false;
+      }
+    }
+    if (f.maxYearsRequired !== null && j.years_min !== null && j.years_min > f.maxYearsRequired) {
       return false;
     }
     return true;
@@ -2457,6 +2480,42 @@ function FilterBar({
               </button>
             );
           })}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <div className="text-xs font-medium text-gray-600 mb-2">Max years required</div>
+          <select
+            value={filters.maxYearsRequired === null ? "any" : String(filters.maxYearsRequired)}
+            onChange={(e) => onChange({ ...filters, maxYearsRequired: e.target.value === "any" ? null : parseInt(e.target.value, 10) })}
+            className="w-full border rounded-lg px-3 py-1.5 text-sm bg-white"
+          >
+            <option value="any">Any</option>
+            <option value="0">Entry-level (no years specified)</option>
+            <option value="1">≤ 1 year</option>
+            <option value="2">≤ 2 years</option>
+            <option value="3">≤ 3 years</option>
+            <option value="5">≤ 5 years</option>
+          </select>
+        </div>
+        <div>
+          <div className="text-xs font-medium text-gray-600 mb-2">Languages I speak (matches JDs needing any)</div>
+          <div className="flex flex-wrap gap-2">
+            {["English", "German", "French", "Spanish", "Dutch", "Italian", "Portuguese"].map((l) => {
+              const on = filters.languages.includes(l);
+              return (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => onChange({ ...filters, languages: toggleArr(filters.languages, l) })}
+                  className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-purple-600 border-purple-600 text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
+                >
+                  {l}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
