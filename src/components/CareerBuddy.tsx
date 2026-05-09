@@ -22,6 +22,7 @@ type Application = {
   fit: number;
   flash?: boolean;
   notes?: string;
+  url?: string;
 };
 
 type Position = {
@@ -1031,15 +1032,19 @@ export default function CareerBuddy() {
     }
   }
 
-  function addApplication(company: string, role: string) {
+  function addApplication(company: string, role: string, opts?: { url?: string; fit?: number }) {
+    if (state.applications.some((a) => a.company === company && a.role === role)) {
+      return;
+    }
     const newApp: Application = {
       id: `a${Date.now()}`,
       company,
       role,
       status: "applied",
       last_event: todayISO(),
-      next_action: "Prep B2B-deal example",
-      fit: 8.4,
+      next_action: "Awaiting reply",
+      fit: opts?.fit ?? 7.0,
+      url: opts?.url,
     };
     setState((s) => ({ ...s, applications: [...s.applications, newApp] }));
   }
@@ -1431,7 +1436,7 @@ export default function CareerBuddy() {
                   matchEntry={matchEntry}
                   matchDisabled={matchDisabled}
                   onAnalyze={() => requestMatch(j)}
-                  onAdd={() => addApplication(j.company, j.role)}
+                  onAdd={() => addApplication(j.company, j.role, { url: j.url, fit: j.fit })}
                   onDismiss={() => dismissJob(j.url)}
                 />
               );
@@ -1721,7 +1726,15 @@ function ApplicationRow({
         className={`border-b transition-colors ease-out group ${app.flash ? "bg-purple-100" : ""}`}
         style={{ transitionDuration: "400ms" }}
       >
-        <td className="py-2 px-2 font-medium">{app.company}</td>
+        <td className="py-2 px-2 font-medium">
+          {app.url ? (
+            <a href={app.url} target="_blank" rel="noopener noreferrer" className="hover:underline decoration-purple-300">
+              {app.company}
+            </a>
+          ) : (
+            app.company
+          )}
+        </td>
         <td className="py-2 px-2">{app.role}</td>
         <td className="py-2 px-2">
           <select
@@ -1949,7 +1962,13 @@ function computeInsights(
   return out;
 }
 
-function AddAppModal({ onClose, onAdd }: { onClose: () => void; onAdd: (company: string, role: string) => void }) {
+function AddAppModal({
+  onClose,
+  onAdd,
+}: {
+  onClose: () => void;
+  onAdd: (company: string, role: string, opts?: { url?: string; fit?: number }) => void;
+}) {
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [url, setUrl] = useState("");
@@ -1961,10 +1980,10 @@ function AddAppModal({ onClose, onAdd }: { onClose: () => void; onAdd: (company:
     if (!company.trim() || !role.trim()) return;
     setLoading(true);
     setTimeout(() => {
-      onAdd(company, role);
+      onAdd(company.trim(), role.trim(), { url: url.trim() || undefined });
       setLoading(false);
       onClose();
-    }, 700);
+    }, 300);
   }
 
   return (
