@@ -83,6 +83,8 @@ type State = {
   dismissed_urls: string[];
 };
 
+type SortKey = "fit" | "recency" | "company" | "years_asc" | "salary_desc";
+
 type Filters = {
   roleCats: string[];
   atsSources: string[];
@@ -92,6 +94,7 @@ type Filters = {
   hideRemote: boolean;
   languages: string[];
   maxYearsRequired: number | null;
+  sort: SortKey;
 };
 
 const DEFAULT_FILTERS: Filters = {
@@ -103,6 +106,7 @@ const DEFAULT_FILTERS: Filters = {
   hideRemote: false,
   languages: [],
   maxYearsRequired: null,
+  sort: "fit",
 };
 
 type MatchResult = {
@@ -489,6 +493,7 @@ function serializeFilters(f: Filters): string {
   if (f.hideRemote) params.set("hide_remote", "1");
   if (f.languages.length) params.set("langs", f.languages.join(","));
   if (f.maxYearsRequired !== null) params.set("max_years", String(f.maxYearsRequired));
+  if (f.sort !== "fit") params.set("sort", f.sort);
   return params.toString();
 }
 
@@ -511,7 +516,43 @@ function parseFiltersFromHash(hash: string): Filters {
   if (langs) out.languages = langs.split(",").filter(Boolean);
   const maxY = params.get("max_years");
   if (maxY && /^\d+$/.test(maxY)) out.maxYearsRequired = parseInt(maxY, 10);
+  const sort = params.get("sort");
+  if (sort === "recency" || sort === "company" || sort === "years_asc" || sort === "salary_desc") {
+    out.sort = sort;
+  }
   return out;
+}
+
+function sortJobs(a: ScoredJob, b: ScoredJob, key: SortKey): number {
+  switch (key) {
+    case "recency": {
+      const ad = a.posted_date ? new Date(a.posted_date).getTime() : 0;
+      const bd = b.posted_date ? new Date(b.posted_date).getTime() : 0;
+      if (bd !== ad) return bd - ad;
+      return b.fit - a.fit;
+    }
+    case "company":
+      return a.company.localeCompare(b.company);
+    case "years_asc": {
+      const ay = a.years_min ?? 99;
+      const by = b.years_min ?? 99;
+      if (ay !== by) return ay - by;
+      return b.fit - a.fit;
+    }
+    case "salary_desc": {
+      const as = a.salary_min ?? -1;
+      const bs = b.salary_min ?? -1;
+      if (bs !== as) return bs - as;
+      return b.fit - a.fit;
+    }
+    case "fit":
+    default: {
+      if (b.fit !== a.fit) return b.fit - a.fit;
+      const ad = a.posted_date ? new Date(a.posted_date).getTime() : 0;
+      const bd = b.posted_date ? new Date(b.posted_date).getTime() : 0;
+      return bd - ad;
+    }
+  }
 }
 
 function countActiveFilters(f: Filters): number {
@@ -1147,14 +1188,9 @@ export default function CareerBuddy() {
           why: fitWhy(j, state.profile, matched),
         };
       })
-      .sort((a, b) => {
-        if (b.fit !== a.fit) return b.fit - a.fit;
-        const ad = a.posted_date ? new Date(a.posted_date).getTime() : 0;
-        const bd = b.posted_date ? new Date(b.posted_date).getTime() : 0;
-        return bd - ad;
-      })
+      .sort((a, b) => sortJobs(a, b, filters.sort))
       .slice(0, 30);
-  }, [filteredJobs, state.profile, profTokens, profYears]);
+  }, [filteredJobs, state.profile, profTokens, profYears, filters.sort]);
 
   const topThreshold = rankedJobs[2]?.fit ?? 0;
 
@@ -1297,6 +1333,17 @@ export default function CareerBuddy() {
                   show {state.dismissed_urls.length} dismissed
                 </button>
               )}
+              <select
+                value={filters.sort}
+                onChange={(e) => setFilters({ ...filters, sort: e.target.value as SortKey })}
+                className="border rounded-lg px-2 py-1.5 bg-white text-gray-700"
+              >
+                <option value="fit">Sort: best fit</option>
+                <option value="recency">Sort: most recent</option>
+                <option value="years_asc">Sort: fewest years required</option>
+                <option value="salary_desc">Sort: highest salary</option>
+                <option value="company">Sort: company A→Z</option>
+              </select>
               <button
                 onClick={() => setFiltersOpen((o) => !o)}
                 className="px-3 py-1.5 border rounded-lg flex items-center gap-1 text-gray-700 hover:bg-gray-50"
