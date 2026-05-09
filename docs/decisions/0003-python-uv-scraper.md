@@ -20,7 +20,7 @@ The Lovable frontend is React/TypeScript. The natural assumption is to keep the 
 
 Layer-1 scraper is a Python 3.11 project managed with `uv`.
 
-- Project root: `scripts/scraper/` with its own `pyproject.toml`.
+- Project root: `backend/` with its own `pyproject.toml`.
 - HTTP: `httpx` (async).
 - HTML: `selectolax` (fast, no JS).
 - JS-rendered fallback: Playwright Python (only when needed; defer until a custom-page case actually requires it).
@@ -28,7 +28,7 @@ Layer-1 scraper is a Python 3.11 project managed with `uv`.
 - LLM client: `anthropic` (claude-haiku-4.5 for Tier-2 classification, cheap + deterministic enough).
 - Scheduler: GitHub Actions cron, daily 00:00 UTC.
 - Lint/format: `ruff` + `ruff format`.
-- Type-check: `mypy --strict` on `scripts/scraper/`.
+- Type-check: `mypy --strict` on `backend/`.
 
 ## Consequences
 
@@ -40,7 +40,7 @@ Layer-1 scraper is a Python 3.11 project managed with `uv`.
 
 **Negative:**
 - Two languages in the repo. Onboarding cost for someone who only knows one. Mitigated: scraper docs are in `scraper-plan.md`, the frontend never imports scraper code.
-- Cannot reuse Lovable-generated TypeScript types in the scraper. Acceptable: the canonical schema lives in `data/schema.sql` and a hand-maintained `scripts/scraper/career_buddy_scraper/models.py` mirrors it.
+- Cannot reuse Lovable-generated TypeScript types in the scraper. Acceptable: the canonical schema lives in `data/schema.sql` and a hand-maintained `backend/career_buddy_scraper/models.py` mirrors it.
 
 **Neutral:**
 - GitHub Actions cron is free and version-controlled. If run-time exceeds Actions limits (currently >6h per job), migrate to Modal or Railway. Cost cap: <$10/mo at 20k rows.

@@ -4,7 +4,7 @@
 -- The canonical migration history now lives in data/migrations/. To bring
 -- a fresh database up to current state, run:
 --
---   cd scripts/scraper && uv run python -m career_buddy_scraper.cli.migrate
+--   cd backend && uv run python -m career_buddy_scraper.cli.migrate
 --
 -- Do NOT add new tables here; create a new migration file instead.
 

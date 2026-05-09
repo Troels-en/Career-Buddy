@@ -7,7 +7,7 @@ Architecture lives in [`docs/scraper-plan.md`](../../docs/scraper-plan.md). Lang
 ## Quickstart
 
 ```bash
-cd scripts/scraper
+cd backend
 uv sync                  # install dependencies into .venv
 uv run pytest            # run tests
 uv run ruff check .      # lint
@@ -40,7 +40,7 @@ are no-ops. See [`docs/decisions/0004-supabase-as-source-of-truth.md`](../../doc
 ## Layout
 
 ```
-scripts/scraper/
+backend/
 ├── pyproject.toml
 ├── README.md (this file)
 ├── career_buddy_scraper/

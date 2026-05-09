@@ -2,7 +2,7 @@
 --
 -- Adds the master VC list and the canonical operator-role job table that the
 -- Layer-1 scraper writes to daily. Mirrors the Pydantic models in
--- scripts/scraper/career_buddy_scraper/models.py and the schema sketch in
+-- backend/career_buddy_scraper/models.py and the schema sketch in
 -- docs/scraper-plan.md.
 --
 -- This migration is idempotent: it can be re-applied safely.

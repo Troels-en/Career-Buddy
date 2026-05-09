@@ -2,7 +2,7 @@
 
 > Land your first startup role. Track applications, learn what works, find roles that fit.
 
-> **Monorepo as of 2026-05-09.** Frontend (Lovable-generated TanStack Start) lives in [`web/`](web/). Backend (Layer-1 scraper) in [`scripts/scraper/`](scripts/scraper/). Both share the same Supabase project via [`data/migrations/`](data/migrations/). The standalone `founder-trackr` repo was the original Lovable target and is being retired in favour of this monorepo.
+> **Monorepo as of 2026-05-09.** Frontend (Lovable / TanStack Start) lives at the repo root. Python backend (Layer-1 scraper) in [`backend/`](backend/). Both share the same Supabase project via [`data/migrations/`](data/migrations/). Bidirectional Lovable ↔ GitHub sync expects the frontend at root, which is why the layout is asymmetric (frontend at root, backend in a subdir).
 
 **ICP:** Business-background grads (Bucerius, CDTM, CLSBE, INSEAD, HEC, LBS, WHU) with 0–2y exp who want to break into early-stage startups via **Founders Associate / BizOps / Strategy / BD** roles. Not engineering. Not senior.
 
@@ -13,61 +13,91 @@
 - No self-knowledge layer: which role-types respond, which don't, why
 - Tools like Clera (Junior-Job-Board) have WhatsApp-chat that forgets you sent a CV — dumb
 
-**Career-Buddy v0.1 (this hackathon ship):**
-- Onboarding-Chat — LLM learns your target role, background, geo
-- CV-Upload — Claude extracts skills/strengths/gaps
-- Add-Application — paste URL → AI parses JD, scores fit vs. your profile
-- Mock-Inbox-Sync — pre-loaded sample mails, AI auto-classifies + updates rows
-- Insights-Panel — pattern-recognition ("B2B responds 3× than B2C", "Avi-Pipeline avg 18d, you're at day 5")
-- VC-Jobs-Feed — 15 curated DACH FA-openings, AI-ranked vs. your profile
-
-**Long-term Vision (Layer 1–3):** see [`docs/PRD.md`](docs/PRD.md). End-state = persistent **Career Buddy** with context-flywheel-moat: app remembers everything about your career, advises on switching, salary negotiation, headhunter-connect, growth-recommendations (courses/videos/events).
-
-**Status:** Built at Lovable Future Founders Series Berlin, 2026-05-07. 2-hour ship.
-
-## Quickstart (Lovable)
-
-This repo holds product spec + sample data. The actual app is built via [Lovable.dev](https://lovable.dev) using `docs/LOVABLE_PROMPT.md`.
-
-```bash
-# Sample data live in /data
-ls data/
-# mock_emails.json — 8 sample inbox-mails for AI-classification demo
-# vc_jobs.json     — 15 curated DACH FA-openings
-# sample_cv.txt    — example CV for demo
-```
-
-## Roadmap
-
-- [x] Layer 0 — Hackathon MVP (this build)
-- [ ] Layer 1 — Real Gmail-OAuth + LinkedIn-sync + VC-scraper
-- [ ] Layer 2 — CV-Coach + Cover-Letter-Generator + Interview-Prep + Growth-Recommender (courses/videos/events)
-- [ ] Layer 3 — Career Buddy (full vision: switch-timing, salary-negotiation, headhunter-broker, life-stage-aware)
+**Long-term Vision (Layer 1–3):** see [`docs/PRD.md`](docs/PRD.md). End-state = persistent **Career Buddy** with context-flywheel-moat: app remembers everything about your career, advises on switching, salary negotiation, headhunter-connect, growth-recommendations.
 
 ## Repository layout
 
 ```
 .
-├── web/                          frontend — TanStack Start + Vite + Cloudflare
-├── scripts/scraper/              backend — Python 3.11 + uv Layer-1 scraper
+├── package.json                  TanStack Start + Vite frontend (Lovable)
+├── vite.config.ts                Vite config
+├── wrangler.jsonc                Cloudflare Workers deploy
+├── tsconfig.json
+├── components.json               shadcn-ui config
+├── public/                       static assets + mock data fixtures
+├── src/
+│   ├── routes/                   TanStack file-based routes
+│   ├── components/
+│   │   ├── CareerBuddy.tsx       main app
+│   │   └── ui/                   shadcn primitives
+│   ├── integrations/supabase/    Supabase client (server + browser)
+│   └── lib/                      utilities (cv-parser, error capture)
+├── supabase/
+│   ├── config.toml
+│   └── functions/analyze-cv/     Edge Function — CV analysis
+├── backend/                      Python 3.11 + uv Layer-1 scraper
+│   ├── pyproject.toml
+│   ├── career_buddy_scraper/
+│   │   ├── ats/                  Greenhouse, Lever, Ashby, Workable, Personio,
+│   │   │                         Recruitee, Gemini-fallback adapters
+│   │   ├── cli/                  scrape, classify, classify_tier2, discover_slugs,
+│   │   │                         migrate, preflight, report, seed_notion
+│   │   ├── sources/              Notion-export loader
+│   │   ├── http.py               RateLimitedClient (token bucket + cache)
+│   │   ├── orchestrator.py       per-VC fetch → normalize → validate → upsert
+│   │   ├── jobs_repo.py          Postgres upsert + mark-stale
+│   │   ├── master_list.py        VC dedupe + upsert
+│   │   ├── models.py             Pydantic schemas
+│   │   ├── classify.py           Tier-1 regex
+│   │   └── gemini_scraper.py     Free-tier LLM extractor
+│   └── tests/                    56 tests, ruff clean, mypy strict clean
 ├── data/
-│   ├── schema.sql                legacy single-shot schema
-│   └── migrations/               canonical migration history (psycopg runner)
-├── docs/                         specs + ADRs (see table below)
-├── artifacts/                    gitignored — local runs, reports, caches
-└── .env.example                  shared env (copy to .env)
+│   ├── schema.sql                legacy single-shot baseline
+│   └── migrations/               canonical migration history
+├── docs/
+│   ├── brief.md / build.md / design.md           specs
+│   ├── PRD.md / DEMO.md                          long-form
+│   ├── LOVABLE_PROMPT.md / refinement-prompts.md Lovable instructions
+│   ├── scraper-plan.md                           Layer-1 architecture
+│   ├── HANDOFF_GEMINI_SCRAPER_2026-05-09.md      hand-off note
+│   └── decisions/                                ADRs (0001–0004)
+├── artifacts/                    gitignored — runs, reports, caches
+├── .env.example                  shared env (backend + frontend Supabase keys)
+└── .gitignore
 ```
 
 ## How frontend and backend connect
 
 Both layers talk to **one Supabase Postgres project**:
 
-- **Backend** (`scripts/scraper/`) writes to `vcs` and `jobs`
-  via the migration runner + Layer-1 scraper.
-- **Frontend** (`web/`) reads from `vcs` and `jobs` (and writes to
-  `users`, `applications`, `events` for end-user actions) via the
-  Supabase JS client.
+- **Backend** (`backend/career_buddy_scraper/`) writes to `vcs` and `jobs` via the migration runner + Layer-1 scraper.
+- **Frontend** (`src/`) reads from `vcs` and `jobs` (and writes to `users`, `applications`, `events` for end-user actions) via the Supabase JS client.
+- **Edge Functions** (`supabase/functions/`) sit between when CPU-bound work needs to run server-side (CV analysis).
 - No backend → frontend network call. Supabase is the API boundary.
+
+## Frontend setup
+
+```bash
+bun install                       # or npm install
+cp .env.example .env              # fill in VITE_SUPABASE_* keys
+bun run dev                       # vite dev server
+```
+
+## Backend setup
+
+```bash
+cd backend
+uv sync                           # install Python deps
+uv run pytest                     # 56 tests
+uv run python -m career_buddy_scraper.cli.scrape   # live scrape
+```
+
+## Roadmap
+
+- [x] Layer 0 — Hackathon MVP (mock-mode demo at Lovable Future Founders Series 2026-05-07)
+- [x] Layer 1 — Real Gmail-OAuth + LinkedIn-sync + VC-scraper (3849 jobs live in Supabase)
+- [ ] Layer 2 — CV-Coach + Cover-Letter + Interview-Prep + Growth-Recommender
+- [ ] Layer 3 — Career Buddy (full vision: switch-timing, salary-negotiation, headhunter-broker, life-stage-aware)
 
 ## Project documentation
 
@@ -81,6 +111,7 @@ Both layers talk to **one Supabase Postgres project**:
 | [`docs/refinement-prompts.md`](docs/refinement-prompts.md) | Iterative prompts to fix specific Lovable misfires |
 | [`docs/project-knowledge.md`](docs/project-knowledge.md) | The Project Knowledge prompt to paste into Lovable settings |
 | [`docs/scraper-plan.md`](docs/scraper-plan.md) | Layer-1 VC + portfolio scraper architecture |
+| [`docs/HANDOFF_GEMINI_SCRAPER_2026-05-09.md`](docs/HANDOFF_GEMINI_SCRAPER_2026-05-09.md) | Gemini scraper hand-off note |
 | [`docs/PRD.md`](docs/PRD.md) | Long-form PRD covering Layers 0–3 |
 | [`docs/DEMO.md`](docs/DEMO.md) | Demo script / talk track |
 | [`docs/decisions/`](docs/decisions/) | Architecture Decision Records (ADRs) — see [the index](docs/decisions/README.md) |

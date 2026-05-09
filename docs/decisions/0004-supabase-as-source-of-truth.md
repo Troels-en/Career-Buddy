@@ -17,7 +17,7 @@ Two real problems with the JSON-only approach:
 
 Supabase Postgres is the source-of-truth for Layer-1 scraper output:
 
-- Two new tables (`vcs`, `jobs`) added via migration `data/migrations/0002_layer1_scraper.sql`. Schema mirrors the Pydantic models in `scripts/scraper/career_buddy_scraper/models.py`.
+- Two new tables (`vcs`, `jobs`) added via migration `data/migrations/0002_layer1_scraper.sql`. Schema mirrors the Pydantic models in `backend/career_buddy_scraper/models.py`.
 - A migration runner (`career_buddy_scraper.cli.migrate`) tracks applied filenames in a `_migrations` table so re-runs are idempotent.
 - `master_list.upsert_into_supabase()` writes `VcRecord`s directly. A defensive `merge()` runs before each upsert so callers can pass raw scraper output. Sector-tag and source-array merges happen server-side via `array(select distinct unnest(... || ...))`.
 - `master_list.write_json()` remains as an optional cache / debug aid. Same for any future `jobs_export.py`.

@@ -5,7 +5,7 @@ Sequential, append-only SQL files applied to the Career-Buddy Supabase project. 
 ## Apply a migration
 
 ```bash
-cd scripts/scraper
+cd backend
 uv run python -m career_buddy_scraper.cli.migrate /path/to/file.sql
 # or apply every unapplied migration in order:
 uv run python -m career_buddy_scraper.cli.migrate --all

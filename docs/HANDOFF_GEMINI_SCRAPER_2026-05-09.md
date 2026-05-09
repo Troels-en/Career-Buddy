@@ -25,19 +25,19 @@ does not eat the Anthropic quota used for coding.
 
 ## Files added / changed
 
-- **`scripts/scraper/career_buddy_scraper/gemini_scraper.py`** (new)
+- **`backend/career_buddy_scraper/gemini_scraper.py`** (new)
   - `GeminiScraper` class with 3-tier fallback chain.
   - CLI entrypoint: `python -m career_buddy_scraper.gemini_scraper --url <url>`.
   - Uses new `google-genai` SDK (not deprecated `google-generativeai`).
 
-- **`scripts/scraper/career_buddy_scraper/ats/gemini_fallback.py`** (new)
+- **`backend/career_buddy_scraper/ats/gemini_fallback.py`** (new)
   - `try_gemini_extract(...)` — wrapper used by orchestrator.
   - `GeminiFallbackBudget` — per-run cap (default 50) to prevent eating Free Tier
     on bad data.
   - `is_enabled()` — gated by `GEMINI_FALLBACK_ENABLED=1`.
   - Maps Gemini raw-dicts → `CanonicalJob` (`ats_source=AtsSource.CUSTOM`).
 
-- **`scripts/scraper/career_buddy_scraper/orchestrator.py`** (modified)
+- **`backend/career_buddy_scraper/orchestrator.py`** (modified)
   - When `_resolve_provider` returns None AND fallback is enabled → tries Gemini.
   - On success: counted as `vcs_matched`, `by_provider["gemini"]`, joins
     `touched` set with `(domain, "custom")`.
@@ -47,11 +47,11 @@ does not eat the Anthropic quota used for coding.
     `gemini_fallback_jobs`, `gemini_fallback_skipped`.
   - run-stats JSON now includes a `gemini_fallback` block.
 
-- **`scripts/scraper/pyproject.toml`** (modified)
+- **`backend/pyproject.toml`** (modified)
   - New dependency group: `gemini = ["google-genai>=0.3"]`.
   - Sync with: `uv sync --group gemini`.
 
-- **`scripts/scraper/career_buddy_scraper/README_gemini.md`** (new)
+- **`backend/career_buddy_scraper/README_gemini.md`** (new)
   - Setup + usage doc for the standalone Gemini scraper.
 
 - **`.env`** (modified — local only, gitignored)
@@ -65,14 +65,14 @@ does not eat the Anthropic quota used for coding.
 ### Run scrape WITHOUT Gemini fallback (default — identical to before)
 
 ```bash
-cd /Users/troelsenigk/fa-track/scripts/scraper
+cd /Users/troelsenigk/fa-track/backend
 uv run python -m career_buddy_scraper.cli scrape   # or whatever your CLI command is
 ```
 
 ### Run scrape WITH Gemini fallback (opt-in)
 
 ```bash
-cd /Users/troelsenigk/fa-track/scripts/scraper
+cd /Users/troelsenigk/fa-track/backend
 set -a; source /Users/troelsenigk/fa-track/.env; set +a
 GEMINI_FALLBACK_ENABLED=1 \
   uv run python -m career_buddy_scraper.cli scrape
@@ -88,7 +88,7 @@ GEMINI_FALLBACK_ENABLED=1 GEMINI_FALLBACK_MAX_PER_RUN=10 \
 ### Standalone Gemini-only run (debug a single page)
 
 ```bash
-cd /Users/troelsenigk/fa-track/scripts/scraper
+cd /Users/troelsenigk/fa-track/backend
 set -a; source /Users/troelsenigk/fa-track/.env; set +a
 uv run python -m career_buddy_scraper.gemini_scraper \
   --url https://job-boards.greenhouse.io/anthropic --pretty
@@ -149,7 +149,7 @@ uv run python -m career_buddy_scraper.gemini_scraper \
 ## Where everything lives
 
 - Career-Buddy code: `/Users/troelsenigk/fa-track/`
-- Scraper module: `/Users/troelsenigk/fa-track/scripts/scraper/career_buddy_scraper/`
+- Scraper module: `/Users/troelsenigk/fa-track/backend/career_buddy_scraper/`
 - Gemini files: `gemini_scraper.py`, `ats/gemini_fallback.py`, `README_gemini.md`
 - Env: `/Users/troelsenigk/fa-track/.env` (gitignored, has real key)
 - Engineering KB (broader context):
