@@ -144,20 +144,6 @@ const DRAFT_KIND_LABEL: Record<DraftKind, string> = {
   follow_up: "Follow-up nudge",
 };
 
-type MockEmail = {
-  matches_company: string;
-  expected_classification:
-    | "rejection"
-    | "interview-invite"
-    | "confirmation"
-    | "follow-up-question"
-    | "offer";
-  subject: string;
-  from: string;
-  date: string;
-  body: string;
-};
-
 type VcJob = {
   company: string;
   role: string;
@@ -213,16 +199,7 @@ const ROLE_CATEGORY_OPTIONS = [
   "investment-analyst",
 ] as const;
 
-const SEED_APPS: Application[] = [
-  { id: "a1", company: "Pedlar", role: "Founders Associate", status: "applied", last_event: "—", next_action: "Awaiting reply", fit: 7.2 },
-  { id: "a2", company: "Avi", role: "Investment Analyst", status: "applied", last_event: "2 days ago", next_action: "Awaiting reply", fit: 8.4 },
-  { id: "a3", company: "Rust", role: "Operating Associate", status: "applied", last_event: "6 days ago", next_action: "Awaiting reply", fit: 6.8 },
-  { id: "a4", company: "Picus Capital", role: "FA Program", status: "applied", last_event: "—", next_action: "Awaiting reply", fit: 8.1 },
-  { id: "a5", company: "Cherry Ventures", role: "Investment Analyst", status: "applied", last_event: "—", next_action: "Awaiting reply", fit: 7.4 },
-  { id: "a6", company: "Project A", role: "Strategy Associate", status: "applied", last_event: "—", next_action: "Awaiting reply", fit: 7.9 },
-  { id: "a7", company: "Earlybird", role: "Investment Analyst", status: "applied", last_event: "—", next_action: "Awaiting reply", fit: 6.5 },
-  { id: "a8", company: "Speedinvest", role: "Investment Associate", status: "applied", last_event: "—", next_action: "Awaiting reply", fit: 8.7 },
-];
+const SEED_APPS: Application[] = [];
 
 const DACH_CITIES = ["berlin", "munich", "münchen", "hamburg", "köln", "cologne", "frankfurt", "vienna", "wien", "zurich", "zürich", "düsseldorf"];
 
@@ -328,7 +305,7 @@ function intersect(profile: Set<string>, job: Set<string>): string[] {
 
 function emptyState(): State {
   return {
-    applications: SEED_APPS,
+    applications: [],
     profile: { ...DEFAULT_PROFILE },
     sync_completed: false,
     dismissed_urls: [],
@@ -789,11 +766,8 @@ export default function CareerBuddy() {
   const [cvLoading, setCvLoading] = useState(false);
   const [cvError, setCvError] = useState<string | null>(null);
   const [cvFilename, setCvFilename] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [summary, setSummary] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const [emails, setEmails] = useState<MockEmail[]>([]);
   const [jobs, setJobs] = useState<VcJob[]>([]);
   const [insightsShimmer, setInsightsShimmer] = useState(false);
   const [matches, setMatches] = useState<Record<string, MatchEntry>>({});
@@ -909,7 +883,6 @@ export default function CareerBuddy() {
   }, [state, hydrated]);
 
   useEffect(() => {
-    fetch("/data/mock_emails.json").then((r) => r.json()).then(setEmails).catch(() => {});
     // Hydrate applications from Supabase (single-user, no auth).
     void (async () => {
       const { data: appRows, error: appErr } = await supabase
@@ -1160,55 +1133,6 @@ export default function CareerBuddy() {
       });
   }
 
-  function syncInbox() {
-    if (syncing) return;
-    setSyncing(true);
-    setSummary(null);
-    const order = ["Pedlar", "Avi", "Picus Capital", "Cherry Ventures", "Project A", "Earlybird", "Rust", "Speedinvest"];
-    order.forEach((company, i) => {
-      setTimeout(() => {
-        setState((s) => ({
-          ...s,
-          applications: s.applications.map((a) => (a.company === company ? applyEmail(a, company) : a)),
-        }));
-        setTimeout(() => {
-          setState((s) => ({
-            ...s,
-            applications: s.applications.map((a) => (a.company === company ? { ...a, flash: false } : a)),
-          }));
-        }, 400);
-      }, i * 250);
-    });
-    setTimeout(() => {
-      setSyncing(false);
-      setSummary("8 emails scanned · 6 applications updated · 6 next actions created · 1 offer received");
-      setState((s) => ({ ...s, sync_completed: true, profile: { ...s.profile, collapsed: true } }));
-    }, 2200);
-  }
-
-  function applyEmail(a: Application, company: string): Application {
-    const date = todayISO();
-    switch (company) {
-      case "Pedlar":
-        return { ...a, status: "rejected", next_action: "Ask for feedback (draft ready)", last_event: date, flash: true };
-      case "Avi":
-        return { ...a, status: "interview-2", next_action: "Thu 3pm CET market sizing case", last_event: date, flash: true };
-      case "Picus Capital":
-        return { ...a, status: "interview-2", next_action: "Coffee chat — pick 3 slots", last_event: date, flash: true };
-      case "Cherry Ventures":
-        return { ...a, status: "rejected", next_action: "Ask for feedback (draft ready)", last_event: date, flash: true };
-      case "Project A":
-        return { ...a, status: "follow-up-needed", next_action: "Reply to Kim: B2B deal example", last_event: date, flash: true };
-      case "Speedinvest":
-        return { ...a, status: "offer", next_action: "Review offer letter — €52k base", last_event: date, flash: true };
-      case "Earlybird":
-      case "Rust":
-        return { ...a, last_event: date, flash: true };
-      default:
-        return a;
-    }
-  }
-
   function resetDemo() {
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -1348,8 +1272,8 @@ export default function CareerBuddy() {
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="font-semibold text-lg" style={{ color: "#7c3aed" }}>Career-Buddy</div>
           <div className="flex items-center gap-4">
-            <span className="text-xs bg-gray-100 rounded-full px-3 py-1">Mock AI mode · cached demo responses</span>
-            <button onClick={resetDemo} className="text-xs text-gray-400 underline">Reset demo</button>
+            <span className="text-xs text-gray-400">{jobs.length} live roles · powered by Gemini</span>
+            <button onClick={resetDemo} className="text-xs text-gray-400 underline" title="Wipe local profile + applications">Reset</button>
           </div>
         </div>
       </header>
@@ -1446,9 +1370,6 @@ export default function CareerBuddy() {
             <ApplicationsTracker
               applications={state.applications}
               onAdd={() => setShowAdd(true)}
-              onSync={syncInbox}
-              syncing={syncing}
-              summary={summary}
               onUpdate={updateApplication}
               onDelete={deleteApplication}
             />
@@ -1749,17 +1670,11 @@ const STATUS_OPTIONS: Status[] = [
 function ApplicationsTracker({
   applications,
   onAdd,
-  onSync,
-  syncing,
-  summary,
   onUpdate,
   onDelete,
 }: {
   applications: Application[];
   onAdd: () => void;
-  onSync: () => void;
-  syncing: boolean;
-  summary: string | null;
   onUpdate: (id: string, patch: Partial<Application>) => void;
   onDelete: (id: string) => void;
 }) {
@@ -1768,18 +1683,22 @@ function ApplicationsTracker({
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Applications</h2>
         <div className="flex gap-2">
-          <button onClick={onAdd} className="px-3 py-2 text-sm bg-white border rounded-lg">+ Add Application</button>
           <button
-            onClick={onSync}
-            disabled={syncing}
-            className="px-6 py-2.5 rounded-lg text-white font-semibold shadow-md hover:shadow-lg flex items-center gap-2"
+            onClick={onAdd}
+            className="px-4 py-2 text-sm rounded-lg text-white font-medium hover:shadow-md"
             style={{ backgroundColor: "#7c3aed" }}
           >
-            {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-            {syncing ? "Scanning 8 cached emails…" : "Sync Inbox"}
+            + Add Application
           </button>
         </div>
       </div>
+
+      {applications.length === 0 && (
+        <div className="text-sm text-gray-500 italic py-6 text-center border border-dashed rounded-lg">
+          No applications yet. Click <span className="font-medium text-gray-700">"Add to tracker"</span> on a role card below, or{" "}
+          <button onClick={onAdd} className="text-purple-700 underline">add one manually</button>.
+        </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -1802,7 +1721,6 @@ function ApplicationsTracker({
         </table>
       </div>
 
-      {summary && <div className="mt-4 bg-gray-50 rounded-lg px-4 py-3 text-sm">{summary}</div>}
     </div>
   );
 }
