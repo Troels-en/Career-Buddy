@@ -142,7 +142,7 @@ class GeminiScraper:
     def _parse_json(text: str) -> list[dict[str, Any]]:
         text = text.strip()
         if text.startswith("```"):
-            lines = [l for l in text.splitlines() if not l.strip().startswith("```")]
+            lines = [line for line in text.splitlines() if not line.strip().startswith("```")]
             text = "\n".join(lines).strip()
         try:
             data = json.loads(text)
