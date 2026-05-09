@@ -483,6 +483,30 @@ function fitScore(job: VcJob, profile: Profile, profTokens: Set<string>, profYea
   };
 }
 
+const FILTER_PRESETS_KEY = "career-buddy-filter-presets-v1";
+
+type FilterPreset = { name: string; filters: Filters };
+
+function loadPresets(): FilterPreset[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(FILTER_PRESETS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((p) => p && typeof p.name === "string" && p.filters) as FilterPreset[];
+  } catch {
+    return [];
+  }
+}
+
+function persistPresets(presets: FilterPreset[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(FILTER_PRESETS_KEY, JSON.stringify(presets));
+  } catch {}
+}
+
 function serializeFilters(f: Filters): string {
   const params = new URLSearchParams();
   if (f.roleCats.length) params.set("cats", f.roleCats.join(","));
@@ -738,6 +762,7 @@ export default function CareerBuddy() {
   const [matchQuotaHit, setMatchQuotaHit] = useState<number | null>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [presets, setPresets] = useState<FilterPreset[]>([]);
   const [filtersHydrated, setFiltersHydrated] = useState(false);
 
   // Hydrate browser-only caches after mount to avoid SSR/CSR mismatch.
@@ -761,12 +786,29 @@ export default function CareerBuddy() {
     if (typeof window === "undefined") return;
     setFilters(parseFiltersFromHash(window.location.hash));
     setFiltersHydrated(true);
+    setPresets(loadPresets());
     function onHashChange() {
       setFilters(parseFiltersFromHash(window.location.hash));
     }
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
+
+  function saveCurrentAsPreset() {
+    const name = window.prompt("Name this filter preset:");
+    if (!name || !name.trim()) return;
+    const next = [...presets.filter((p) => p.name !== name.trim()), { name: name.trim(), filters }];
+    setPresets(next);
+    persistPresets(next);
+  }
+  function applyPreset(p: FilterPreset) {
+    setFilters({ ...DEFAULT_FILTERS, ...p.filters });
+  }
+  function deletePreset(name: string) {
+    const next = presets.filter((p) => p.name !== name);
+    setPresets(next);
+    persistPresets(next);
+  }
 
   useEffect(() => {
     if (!filtersHydrated) return;
@@ -1364,6 +1406,10 @@ export default function CareerBuddy() {
               onChange={setFilters}
               onReset={() => setFilters(DEFAULT_FILTERS)}
               jobs={jobs}
+              presets={presets}
+              onSavePreset={saveCurrentAsPreset}
+              onApplyPreset={applyPreset}
+              onDeletePreset={deletePreset}
             />
           )}
           {matchQuotaHit && Date.now() - matchQuotaHit < MATCH_QUOTA_COOLDOWN_MS && (
@@ -2418,11 +2464,19 @@ function FilterBar({
   onChange,
   onReset,
   jobs,
+  presets,
+  onSavePreset,
+  onApplyPreset,
+  onDeletePreset,
 }: {
   filters: Filters;
   onChange: (f: Filters) => void;
   onReset: () => void;
   jobs: VcJob[];
+  presets: FilterPreset[];
+  onSavePreset: () => void;
+  onApplyPreset: (p: FilterPreset) => void;
+  onDeletePreset: (name: string) => void;
 }) {
   const atsCounts = useMemo(() => {
     const m = new Map<string, number>();
@@ -2566,7 +2620,25 @@ function FilterBar({
         </div>
       </div>
 
-      <div className="flex justify-end pt-1">
+      <div className="flex justify-between items-center pt-1 flex-wrap gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {presets.length > 0 && <span className="text-xs text-gray-500">Saved:</span>}
+          {presets.map((p) => (
+            <span key={p.name} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-white border">
+              <button onClick={() => onApplyPreset(p)} className="text-purple-700 hover:underline">{p.name}</button>
+              <button
+                onClick={() => onDeletePreset(p.name)}
+                className="text-gray-300 hover:text-red-600"
+                aria-label={`Delete preset ${p.name}`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+          <button onClick={onSavePreset} className="text-xs px-2 py-1 rounded-full border border-purple-300 text-purple-700 hover:bg-purple-50">
+            + Save as preset
+          </button>
+        </div>
         <button onClick={onReset} className="text-xs text-gray-600 underline hover:text-gray-800">
           Reset filters
         </button>
