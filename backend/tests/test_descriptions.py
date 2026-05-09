@@ -11,7 +11,6 @@ from career_buddy_scraper.descriptions import (
     extract_lever,
 )
 
-
 GREENHOUSE_HAPPY = {
     "title": "Founders Associate",
     "content": (
@@ -89,7 +88,7 @@ def test_dispatch_extract_returns_empty_for_none_payload() -> None:
 
 
 def test_dispatch_extract_returns_empty_for_empty_dict() -> None:
-    desc, reqs = extract("greenhouse", {})
+    desc, _reqs = extract("greenhouse", {})
     assert desc == ""
 
 
@@ -145,7 +144,7 @@ def test_french_profil_recherche_heading() -> None:
         "title": "Stage",
         "descriptionPlain": "Description du poste.\n\nProfil recherché\n\n- Master en finance\n- Anglais courant\n\nAvantages\n\n- TR\n",
     }
-    desc, reqs = extract_ashby(payload)
+    _desc, reqs = extract_ashby(payload)
     assert "Master en finance" in reqs
     assert "TR" not in reqs
 
@@ -155,7 +154,7 @@ def test_double_escaped_greenhouse_html_is_decoded() -> None:
         "title": "Ops",
         "content": "&amp;lt;p&amp;gt;Hello&amp;lt;/p&amp;gt;&amp;lt;p&amp;gt;Requirements&amp;lt;/p&amp;gt;&amp;lt;p&amp;gt;5 years&amp;lt;/p&amp;gt;",
     }
-    desc, reqs = extract_greenhouse(payload)
+    desc, _reqs = extract_greenhouse(payload)
     assert "Hello" in desc
     assert "Requirements" in desc
     # heading detection on aggressive double-escape can be fragile; ensure

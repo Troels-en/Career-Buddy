@@ -1,0 +1,61 @@
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Sync deps
+        run: uv sync --frozen --extra gemini
+
+      - name: Ruff lint
+        run: uv run ruff check
+
+      - name: Mypy
+        run: uv run mypy career_buddy_scraper
+
+      - name: Pytest
+        env:
+          # Skip live-DB tests; unit tests don't need Supabase.
+          SUPABASE_DB_URL: ""
+        run: uv run pytest -q --tb=short
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install
+        run: bun install --frozen-lockfile || bun install
+
+      - name: Build
+        env:
+          # Build-time vars — public anon-equivalent test values.
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: stub-anon-key
+          VITE_SUPABASE_PROJECT_ID: example
+        run: bun run build

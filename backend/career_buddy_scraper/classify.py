@@ -17,7 +17,7 @@ from .models import RoleCategory
 TIER1_PATTERNS: list[tuple[re.Pattern[str], RoleCategory]] = [
     (
         re.compile(
-            r"\b(founders?\s*associate|founder['’]?s\s*associate|special\s+projects)\b",  # noqa: RUF001  intentional smart quote
+            r"\b(founders?\s*associate|founder['’]?s\s*associate|special\s+projects)\b",
             re.I,
         ),
         RoleCategory.FOUNDERS_ASSOCIATE,
