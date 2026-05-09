@@ -146,6 +146,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_remote: boolean | null
+          languages_required: string[] | null
           last_seen_at: string | null
           location: string | null
           location_normalized: string | null
@@ -154,7 +155,12 @@ export type Database = {
           requirements: string | null
           role_category: string | null
           role_title: string
+          salary_currency: string | null
+          salary_max: number | null
+          salary_min: number | null
           url: string
+          years_max: number | null
+          years_min: number | null
         }
         Insert: {
           ats_source: string
@@ -166,6 +172,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_remote?: boolean | null
+          languages_required?: string[] | null
           last_seen_at?: string | null
           location?: string | null
           location_normalized?: string | null
@@ -174,7 +181,12 @@ export type Database = {
           requirements?: string | null
           role_category?: string | null
           role_title: string
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
           url: string
+          years_max?: number | null
+          years_min?: number | null
         }
         Update: {
           ats_source?: string
@@ -186,6 +198,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_remote?: boolean | null
+          languages_required?: string[] | null
           last_seen_at?: string | null
           location?: string | null
           location_normalized?: string | null
@@ -194,7 +207,12 @@ export type Database = {
           requirements?: string | null
           role_category?: string | null
           role_title?: string
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
           url?: string
+          years_max?: number | null
+          years_min?: number | null
         }
         Relationships: []
       }
@@ -459,3 +477,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+<claude-code-hint v="1" type="plugin" value="supabase@claude-plugins-official" />

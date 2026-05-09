@@ -143,6 +143,12 @@ type VcJob = {
   is_remote: boolean;
   description: string | null;
   requirements: string | null;
+  years_min: number | null;
+  years_max: number | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_currency: string | null;
+  languages_required: string[];
   jobTokens: Set<string>;
   reqTokens: Set<string>;
 };
@@ -225,6 +231,30 @@ function tokenize(text: string): Set<string> {
     out.add(tok);
   }
   return out;
+}
+
+function profileYearsExperience(profile: Profile): number {
+  // Sum work_history durations; fall back to count of strengths-style heuristic.
+  let months = 0;
+  for (const w of profile.work_history) {
+    const start = parseYearMonth(w.start_date);
+    const end = w.end_date && /present|current|now/i.test(w.end_date) ? new Date() : parseYearMonth(w.end_date);
+    if (start && end) {
+      months += Math.max(0, (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth());
+    }
+  }
+  return Math.round(months / 12);
+}
+
+function parseYearMonth(s: string | undefined | null): Date | null {
+  if (!s) return null;
+  // YYYY-MM
+  const m = /(\d{4})-(\d{1,2})/.exec(s);
+  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, 1);
+  // YYYY only
+  const yo = /^(\d{4})$/.exec(s.trim());
+  if (yo) return new Date(parseInt(yo[1], 10), 0, 1);
+  return null;
 }
 
 function buildProfileTokens(profile: Profile): Set<string> {
@@ -350,6 +380,13 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function formatSalary(min: number, max: number | null, currency: string | null): string {
+  const sym = currency === "EUR" ? "€" : currency === "GBP" ? "£" : currency === "USD" ? "$" : "";
+  const fmt = (n: number) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
+  if (max !== null && max > min) return `${sym}${fmt(min)}–${fmt(max)}`;
+  return `${sym}${fmt(min)}+`;
+}
+
 function relativeDays(iso: string | null): string {
   if (!iso) return "—";
   const ms = Date.now() - new Date(iso).getTime();
@@ -361,7 +398,7 @@ function relativeDays(iso: string | null): string {
   return `${Math.floor(days / 365)}y ago`;
 }
 
-function fitScore(job: VcJob, profile: Profile, profTokens: Set<string>): { score: number; matched: string[] } {
+function fitScore(job: VcJob, profile: Profile, profTokens: Set<string>, profYears: number): { score: number; matched: string[] } {
   let score = 5.0;
 
   if (job.role_category && profile.target_role_categories.includes(job.role_category)) {
@@ -407,6 +444,29 @@ function fitScore(job: VcJob, profile: Profile, profTokens: Set<string>): { scor
     matched = [...reqMatches, ...descOnly].slice(0, 8);
     const overlapBoost = Math.min(reqMatches.length * 0.4 + descOnly.length * 0.2, 2.0);
     score += overlapBoost;
+  }
+
+  // Years-of-experience gap (Layer-3 enrichment).
+  if (job.years_min !== null) {
+    const gap = job.years_min - profYears;
+    if (gap <= 0) score += 0.4;
+    else if (gap <= 1) score -= 0.2;
+    else if (gap <= 3) score -= 0.7;
+    else score -= 1.5;
+  }
+
+  // Languages: penalise if a required language isn't claimed in profile strengths.
+  if (job.languages_required.length > 0) {
+    const haveLangs = new Set(
+      profile.strengths
+        .map((s) => s.toLowerCase())
+        .flatMap((s) => s.match(/\b(english|german|french|spanish|dutch|italian|portuguese)\b/gi) ?? []),
+    );
+    const missingLangs = job.languages_required.filter((l) => !haveLangs.has(l.toLowerCase()));
+    if (missingLangs.length > 0 && haveLangs.size > 0) {
+      // User specified some languages but is missing one the JD requires.
+      score -= 0.5 * missingLangs.length;
+    }
   }
 
   return {
@@ -720,7 +780,7 @@ export default function CareerBuddy() {
 
       const { data, error } = await supabase
         .from("jobs")
-        .select("company_name, role_title, role_category, location, url, ats_source, posted_date, is_remote, description, requirements")
+        .select("company_name, role_title, role_category, location, url, ats_source, posted_date, is_remote, description, requirements, years_min, years_max, salary_min, salary_max, salary_currency, languages_required")
         .eq("is_active", true)
         .order("posted_date", { ascending: false, nullsFirst: false })
         .limit(60);
@@ -739,10 +799,15 @@ export default function CareerBuddy() {
         is_remote: boolean | null;
         description: string | null;
         requirements: string | null;
+        years_min: number | null;
+        years_max: number | null;
+        salary_min: number | null;
+        salary_max: number | null;
+        salary_currency: string | null;
+        languages_required: string[] | null;
       }>;
       setJobs(
         rows.map((r) => {
-          // Tokenize once at fetch time; intersection per render is O(min).
           const desc = (r.description ?? "").slice(0, 4000);
           const reqs = (r.requirements ?? "").slice(0, 2000);
           return {
@@ -756,6 +821,12 @@ export default function CareerBuddy() {
             is_remote: r.is_remote === true,
             description: r.description,
             requirements: r.requirements,
+            years_min: r.years_min,
+            years_max: r.years_max,
+            salary_min: r.salary_min,
+            salary_max: r.salary_max,
+            salary_currency: r.salary_currency,
+            languages_required: r.languages_required ?? [],
             jobTokens: tokenize(`${r.role_title} ${desc}`),
             reqTokens: tokenize(reqs),
           };
@@ -939,6 +1010,7 @@ export default function CareerBuddy() {
   }
 
   const profTokens = useMemo(() => buildProfileTokens(state.profile), [state.profile]);
+  const profYears = useMemo(() => profileYearsExperience(state.profile), [state.profile]);
   const profSig = useMemo(() => profileSignature(state.profile), [state.profile]);
 
   // Persist match cache; evict entries whose profile_signature no longer matches.
@@ -1044,7 +1116,7 @@ export default function CareerBuddy() {
   const rankedJobs: ScoredJob[] = useMemo(() => {
     return filteredJobs
       .map((j) => {
-        const { score, matched } = fitScore(j, state.profile, profTokens);
+        const { score, matched } = fitScore(j, state.profile, profTokens, profYears);
         return {
           ...j,
           fit: score,
@@ -1059,7 +1131,7 @@ export default function CareerBuddy() {
         return bd - ad;
       })
       .slice(0, 30);
-  }, [filteredJobs, state.profile, profTokens]);
+  }, [filteredJobs, state.profile, profTokens, profYears]);
 
   const topThreshold = rankedJobs[2]?.fit ?? 0;
 
@@ -2141,11 +2213,24 @@ function JobCard({
         <div className="text-sm">{job.role}</div>
         <div className="text-xs text-gray-500 no-underline">{job.location}</div>
       </a>
-      <div className="mt-2 flex items-center gap-2 text-[10px]">
+      <div className="mt-2 flex items-center gap-1.5 flex-wrap text-[10px]">
         <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase tracking-wide">{job.ats_source}</span>
         {job.role_category && job.role_category !== "other" && (
           <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">{job.role_category}</span>
         )}
+        {job.years_min !== null && (
+          <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+            {job.years_max !== null ? `${job.years_min}–${job.years_max}y` : `${job.years_min}+y`}
+          </span>
+        )}
+        {job.salary_min !== null && (
+          <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-700">
+            {formatSalary(job.salary_min, job.salary_max, job.salary_currency)}
+          </span>
+        )}
+        {job.languages_required.slice(0, 3).map((l) => (
+          <span key={l} className="px-2 py-0.5 rounded-full bg-orange-50 text-orange-700">{l}</span>
+        ))}
         <span className="text-gray-400">{relativeDays(job.posted_date)}</span>
       </div>
       <div className="text-xs mt-3 text-gray-600">{job.why}</div>
