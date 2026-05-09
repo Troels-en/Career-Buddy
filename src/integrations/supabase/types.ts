@@ -1,3 +1,6 @@
+Resolving dependencies
+Resolved, downloaded and extracted [90]
+Saved lockfile
 export type Json =
   | string
   | number
@@ -14,7 +17,298 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      _migrations: {
+        Row: {
+          applied_at: string | null
+          filename: string
+        }
+        Insert: {
+          applied_at?: string | null
+          filename: string
+        }
+        Update: {
+          applied_at?: string | null
+          filename?: string
+        }
+        Relationships: []
+      }
+      applications: {
+        Row: {
+          applied_date: string | null
+          company: string
+          created_at: string | null
+          fit_score: number | null
+          id: string
+          last_event_date: string | null
+          next_action: string | null
+          notes: string | null
+          role: string | null
+          status: string | null
+          url: string | null
+          user_id: string | null
+        }
+        Insert: {
+          applied_date?: string | null
+          company: string
+          created_at?: string | null
+          fit_score?: number | null
+          id?: string
+          last_event_date?: string | null
+          next_action?: string | null
+          notes?: string | null
+          role?: string | null
+          status?: string | null
+          url?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          applied_date?: string | null
+          company?: string
+          created_at?: string | null
+          fit_score?: number | null
+          id?: string
+          last_event_date?: string | null
+          next_action?: string | null
+          notes?: string | null
+          role?: string | null
+          status?: string | null
+          url?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          application_id: string | null
+          email_body: string | null
+          email_subject: string | null
+          event_type: string
+          id: string
+          parsed_action: string | null
+          parsed_at: string | null
+        }
+        Insert: {
+          application_id?: string | null
+          email_body?: string | null
+          email_subject?: string | null
+          event_type: string
+          id?: string
+          parsed_action?: string | null
+          parsed_at?: string | null
+        }
+        Update: {
+          application_id?: string | null
+          email_body?: string | null
+          email_subject?: string | null
+          event_type?: string
+          id?: string
+          parsed_action?: string | null
+          parsed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          ats_source: string
+          company_domain: string
+          company_name: string
+          description: string | null
+          employment_type: string | null
+          first_seen_at: string | null
+          id: string
+          is_active: boolean | null
+          is_remote: boolean | null
+          last_seen_at: string | null
+          location: string | null
+          location_normalized: string | null
+          posted_date: string | null
+          raw_payload: Json | null
+          requirements: string | null
+          role_category: string | null
+          role_title: string
+          url: string
+        }
+        Insert: {
+          ats_source: string
+          company_domain: string
+          company_name: string
+          description?: string | null
+          employment_type?: string | null
+          first_seen_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_remote?: boolean | null
+          last_seen_at?: string | null
+          location?: string | null
+          location_normalized?: string | null
+          posted_date?: string | null
+          raw_payload?: Json | null
+          requirements?: string | null
+          role_category?: string | null
+          role_title: string
+          url: string
+        }
+        Update: {
+          ats_source?: string
+          company_domain?: string
+          company_name?: string
+          description?: string | null
+          employment_type?: string | null
+          first_seen_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_remote?: boolean | null
+          last_seen_at?: string | null
+          location?: string | null
+          location_normalized?: string | null
+          posted_date?: string | null
+          raw_payload?: Json | null
+          requirements?: string | null
+          role_category?: string | null
+          role_title?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          background: string | null
+          created_at: string | null
+          cv_text: string | null
+          email: string | null
+          id: string
+          name: string | null
+          profile_json: Json | null
+          target_geo: string | null
+          target_role: string | null
+        }
+        Insert: {
+          background?: string | null
+          created_at?: string | null
+          cv_text?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          profile_json?: Json | null
+          target_geo?: string | null
+          target_role?: string | null
+        }
+        Update: {
+          background?: string | null
+          created_at?: string | null
+          cv_text?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          profile_json?: Json | null
+          target_geo?: string | null
+          target_role?: string | null
+        }
+        Relationships: []
+      }
+      vc_jobs: {
+        Row: {
+          company: string
+          description: string | null
+          id: string
+          location: string | null
+          posted_date: string | null
+          requirements: string | null
+          role: string
+          scraped_at: string | null
+          url: string | null
+        }
+        Insert: {
+          company: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          posted_date?: string | null
+          requirements?: string | null
+          role: string
+          scraped_at?: string | null
+          url?: string | null
+        }
+        Update: {
+          company?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          posted_date?: string | null
+          requirements?: string | null
+          role?: string
+          scraped_at?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
+      vcs: {
+        Row: {
+          aum_bucket: string | null
+          careers_url: string | null
+          created_at: string | null
+          domain: string
+          geography: string | null
+          id: string
+          name: string
+          notes: string | null
+          portfolio_companies_url: string | null
+          sector_tags: string[] | null
+          sources: string[] | null
+          stage_focus: string | null
+          tier: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          aum_bucket?: string | null
+          careers_url?: string | null
+          created_at?: string | null
+          domain: string
+          geography?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          portfolio_companies_url?: string | null
+          sector_tags?: string[] | null
+          sources?: string[] | null
+          stage_focus?: string | null
+          tier?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          aum_bucket?: string | null
+          careers_url?: string | null
+          created_at?: string | null
+          domain?: string
+          geography?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          portfolio_companies_url?: string | null
+          sector_tags?: string[] | null
+          sources?: string[] | null
+          stage_focus?: string | null
+          tier?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -153,3 +447,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+<claude-code-hint v="1" type="plugin" value="supabase@claude-plugins-official" />
