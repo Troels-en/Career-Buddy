@@ -12,6 +12,7 @@ from datetime import date, datetime
 from typing import Any, cast
 from urllib.parse import urlparse
 
+from ..descriptions import extract_ashby
 from ..http import RateLimitedClient
 from ..models import AtsSource
 
@@ -49,6 +50,7 @@ class AshbyAdapter:
         posted_date = _parse_iso_date(published_raw if isinstance(published_raw, str) else None)
         is_remote_obj = raw.get("isRemote")
         is_remote = bool(is_remote_obj) if isinstance(is_remote_obj, bool) else False
+        description, requirements = extract_ashby(raw)
         return {
             "company_name": company_name,
             "company_domain": company_domain,
@@ -57,6 +59,8 @@ class AshbyAdapter:
             "is_remote": is_remote,
             "employment_type": employment_type,
             "url": url,
+            "description": description or None,
+            "requirements": requirements or None,
             "posted_date": posted_date,
             "ats_source": self.source.value,
             "raw_payload": raw,

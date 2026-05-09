@@ -12,6 +12,7 @@ from datetime import UTC, date, datetime
 from typing import Any
 from urllib.parse import urlparse
 
+from ..descriptions import extract_lever
 from ..http import RateLimitedClient
 from ..models import AtsSource
 
@@ -52,6 +53,7 @@ class LeverAdapter:
         posted_date: date | None = None
         if isinstance(created_at_ms, (int, float)):
             posted_date = datetime.fromtimestamp(created_at_ms / 1000, tz=UTC).date()
+        description, requirements = extract_lever(raw)
         return {
             "company_name": company_name,
             "company_domain": company_domain,
@@ -59,6 +61,8 @@ class LeverAdapter:
             "location": location or None,
             "employment_type": commitment,
             "url": url,
+            "description": description or None,
+            "requirements": requirements or None,
             "posted_date": posted_date,
             "ats_source": self.source.value,
             "raw_payload": raw,

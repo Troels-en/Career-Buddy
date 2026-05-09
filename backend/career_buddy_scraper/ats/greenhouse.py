@@ -12,6 +12,7 @@ from datetime import date, datetime
 from typing import Any, cast
 from urllib.parse import urlparse
 
+from ..descriptions import extract_greenhouse
 from ..http import RateLimitedClient
 from ..models import AtsSource
 
@@ -55,12 +56,15 @@ class GreenhouseAdapter:
             location = str(location_obj.get("name", ""))
         updated_raw = raw.get("updated_at")
         posted_date = _parse_iso_date(updated_raw if isinstance(updated_raw, str) else None)
+        description, requirements = extract_greenhouse(raw)
         return {
             "company_name": company_name,
             "company_domain": company_domain,
             "role_title": title,
             "location": location or None,
             "url": url,
+            "description": description or None,
+            "requirements": requirements or None,
             "posted_date": posted_date,
             "ats_source": self.source.value,
             "raw_payload": raw,
