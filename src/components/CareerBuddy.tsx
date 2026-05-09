@@ -673,6 +673,26 @@ function applyFilters(jobs: VcJob[], f: Filters, dismissed: Set<string>): VcJob[
   });
 }
 
+function applicationToRow(a: Application): Record<string, unknown> {
+  return {
+    client_id: a.id,
+    company: a.company,
+    role: a.role,
+    status: a.status,
+    next_action: a.next_action,
+    fit_score: a.fit,
+    url: a.url ?? null,
+    notes: a.notes ?? null,
+    last_event_date: safeIsoDate(a.last_event),
+  };
+}
+
+function safeIsoDate(s: string | undefined): string | null {
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s).toISOString();
+  return null;
+}
+
 function profileSignature(p: Profile): string {
   // Stable signature: changes when fitness-affecting fields change.
   const parts = [
@@ -890,6 +910,49 @@ export default function CareerBuddy() {
 
   useEffect(() => {
     fetch("/data/mock_emails.json").then((r) => r.json()).then(setEmails).catch(() => {});
+    // Hydrate applications from Supabase (single-user, no auth).
+    void (async () => {
+      const { data: appRows, error: appErr } = await supabase
+        .from("applications")
+        .select("client_id, company, role, status, next_action, fit_score, url, notes, last_event_date")
+        .not("client_id", "is", null);
+      if (appErr) {
+        console.warn("[applications] fetch failed", appErr.message);
+        return;
+      }
+      type AppRow = {
+        client_id: string;
+        company: string;
+        role: string | null;
+        status: string | null;
+        next_action: string | null;
+        fit_score: number | null;
+        url: string | null;
+        notes: string | null;
+        last_event_date: string | null;
+      };
+      const remote: Application[] = (appRows ?? [])
+        .filter((r): r is AppRow => !!r && typeof r.client_id === "string")
+        .map((r) => ({
+          id: r.client_id,
+          company: r.company,
+          role: r.role ?? "",
+          status: (r.status ?? "applied") as Status,
+          last_event: r.last_event_date ? r.last_event_date.slice(0, 10) : "—",
+          next_action: r.next_action ?? "",
+          fit: typeof r.fit_score === "number" ? r.fit_score : 7.0,
+          url: r.url ?? undefined,
+          notes: r.notes ?? undefined,
+        }));
+      if (remote.length > 0) {
+        setState((s) => {
+          // Merge: any localStorage app whose id isn't on the server stays (will be synced on next mutation).
+          const remoteIds = new Set(remote.map((r) => r.id));
+          const localOnly = s.applications.filter((a) => !remoteIds.has(a.id));
+          return { ...s, applications: [...remote, ...localOnly] };
+        });
+      }
+    })();
     void (async () => {
       const { data: dismissedRows, error: dismissedError } = await supabase
         .from("job_dismissals")
@@ -1050,6 +1113,15 @@ export default function CareerBuddy() {
     }
   }
 
+  function syncApp(a: Application) {
+    void supabase
+      .from("applications")
+      .upsert(applicationToRow(a), { onConflict: "client_id" })
+      .then(({ error }) => {
+        if (error) console.warn("[applications] upsert failed", error.message);
+      });
+  }
+
   function addApplication(company: string, role: string, opts?: { url?: string; fit?: number }) {
     if (state.applications.some((a) => a.company === company && a.role === role)) {
       return;
@@ -1065,17 +1137,27 @@ export default function CareerBuddy() {
       url: opts?.url,
     };
     setState((s) => ({ ...s, applications: [...s.applications, newApp] }));
+    syncApp(newApp);
   }
 
   function updateApplication(id: string, patch: Partial<Application>) {
-    setState((s) => ({
-      ...s,
-      applications: s.applications.map((a) => (a.id === id ? { ...a, ...patch } : a)),
-    }));
+    setState((s) => {
+      const next = s.applications.map((a) => (a.id === id ? { ...a, ...patch } : a));
+      const updated = next.find((a) => a.id === id);
+      if (updated) syncApp(updated);
+      return { ...s, applications: next };
+    });
   }
 
   function deleteApplication(id: string) {
     setState((s) => ({ ...s, applications: s.applications.filter((a) => a.id !== id) }));
+    void supabase
+      .from("applications")
+      .delete()
+      .eq("client_id", id)
+      .then(({ error }) => {
+        if (error) console.warn("[applications] delete failed", error.message);
+      });
   }
 
   function syncInbox() {

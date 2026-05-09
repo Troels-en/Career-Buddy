@@ -32,13 +32,16 @@ export type Database = {
       applications: {
         Row: {
           applied_date: string | null
+          client_id: string | null
           company: string
           created_at: string | null
           fit_score: number | null
           id: string
+          job_url: string | null
           last_event_date: string | null
           next_action: string | null
           notes: string | null
+          notes_text: string | null
           role: string | null
           status: string | null
           url: string | null
@@ -46,13 +49,16 @@ export type Database = {
         }
         Insert: {
           applied_date?: string | null
+          client_id?: string | null
           company: string
           created_at?: string | null
           fit_score?: number | null
           id?: string
+          job_url?: string | null
           last_event_date?: string | null
           next_action?: string | null
           notes?: string | null
+          notes_text?: string | null
           role?: string | null
           status?: string | null
           url?: string | null
@@ -60,13 +66,16 @@ export type Database = {
         }
         Update: {
           applied_date?: string | null
+          client_id?: string | null
           company?: string
           created_at?: string | null
           fit_score?: number | null
           id?: string
+          job_url?: string | null
           last_event_date?: string | null
           next_action?: string | null
           notes?: string | null
+          notes_text?: string | null
           role?: string | null
           status?: string | null
           url?: string | null
@@ -477,4 +486,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-<claude-code-hint v="1" type="plugin" value="supabase@claude-plugins-official" />
