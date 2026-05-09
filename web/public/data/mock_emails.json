@@ -1,0 +1,10 @@
+[
+  {"matches_company":"Pedlar","expected_classification":"rejection","subject":"Re: Founders Associate application — outcome","from":"talent@pedlar.io","date":"2026-05-05T09:12:00Z","body":"Thank you for applying. After review, we will not be moving forward at this time."},
+  {"matches_company":"Avi","expected_classification":"interview-invite","subject":"Avi Investment Analyst — next steps","from":"hiring@avi.vc","date":"2026-05-06T11:30:00Z","body":"We'd like to invite you to a market sizing case Thursday 3pm CET."},
+  {"matches_company":"Rust","expected_classification":"confirmation","subject":"Application received — Operating Associate","from":"jobs@rust.com","date":"2026-05-06T14:00:00Z","body":"We've received your application and will be in touch."},
+  {"matches_company":"Picus Capital","expected_classification":"interview-invite","subject":"Coffee chat — Picus Capital FA Program","from":"fa@picuscap.com","date":"2026-05-06T15:45:00Z","body":"Pick a slot for a coffee chat with our team."},
+  {"matches_company":"Cherry Ventures","expected_classification":"rejection","subject":"Cherry Ventures Investment Analyst — decision","from":"team@cherry.vc","date":"2026-05-06T16:10:00Z","body":"We've decided not to move forward."},
+  {"matches_company":"Project A","expected_classification":"follow-up-question","subject":"Quick question on your CV (Kim @ Project A)","from":"kim@project-a.com","date":"2026-05-06T17:00:00Z","body":"Could you share a B2B deal example?"},
+  {"matches_company":"Earlybird","expected_classification":"confirmation","subject":"Earlybird Investment Analyst — application received","from":"talent@earlybird.com","date":"2026-05-06T18:00:00Z","body":"Thanks — application received."},
+  {"matches_company":"Speedinvest","expected_classification":"offer","subject":"Offer — Speedinvest Investment Associate","from":"hr@speedinvest.com","date":"2026-05-07T09:00:00Z","body":"We're delighted to offer you the role at €52k base."}
+]

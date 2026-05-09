@@ -2,6 +2,8 @@
 
 > Land your first startup role. Track applications, learn what works, find roles that fit.
 
+> **Monorepo as of 2026-05-09.** Frontend (Lovable-generated TanStack Start) lives in [`web/`](web/). Backend (Layer-1 scraper) in [`scripts/scraper/`](scripts/scraper/). Both share the same Supabase project via [`data/migrations/`](data/migrations/). The standalone `founder-trackr` repo was the original Lovable target and is being retired in favour of this monorepo.
+
 **ICP:** Business-background grads (Bucerius, CDTM, CLSBE, INSEAD, HEC, LBS, WHU) with 0–2y exp who want to break into early-stage startups via **Founders Associate / BizOps / Strategy / BD** roles. Not engineering. Not senior.
 
 **The Pain:**
@@ -41,6 +43,31 @@ ls data/
 - [ ] Layer 1 — Real Gmail-OAuth + LinkedIn-sync + VC-scraper
 - [ ] Layer 2 — CV-Coach + Cover-Letter-Generator + Interview-Prep + Growth-Recommender (courses/videos/events)
 - [ ] Layer 3 — Career Buddy (full vision: switch-timing, salary-negotiation, headhunter-broker, life-stage-aware)
+
+## Repository layout
+
+```
+.
+├── web/                          frontend — TanStack Start + Vite + Cloudflare
+├── scripts/scraper/              backend — Python 3.11 + uv Layer-1 scraper
+├── data/
+│   ├── schema.sql                legacy single-shot schema
+│   └── migrations/               canonical migration history (psycopg runner)
+├── docs/                         specs + ADRs (see table below)
+├── artifacts/                    gitignored — local runs, reports, caches
+└── .env.example                  shared env (copy to .env)
+```
+
+## How frontend and backend connect
+
+Both layers talk to **one Supabase Postgres project**:
+
+- **Backend** (`scripts/scraper/`) writes to `vcs` and `jobs`
+  via the migration runner + Layer-1 scraper.
+- **Frontend** (`web/`) reads from `vcs` and `jobs` (and writes to
+  `users`, `applications`, `events` for end-user actions) via the
+  Supabase JS client.
+- No backend → frontend network call. Supabase is the API boundary.
 
 ## Project documentation
 
