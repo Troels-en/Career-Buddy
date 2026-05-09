@@ -157,7 +157,7 @@ class RateLimitedClient:
                         cache_hit=True,
                     )
                 )
-                return _synth_response(entry)
+                return _synth_response(entry, method=method, url=url)
 
         await self._bucket.acquire()
         await self._wait_for_host(host)
@@ -233,7 +233,9 @@ def _cache_key(method: str, url: str, body: Any) -> str:
     return f"{url}|{body_repr}"
 
 
-def _synth_response(entry: dict[str, Any]) -> httpx.Response:
+def _synth_response(
+    entry: dict[str, Any], *, method: str = "GET", url: str = ""
+) -> httpx.Response:
     body = entry.get("body")
     if isinstance(body, (dict, list)):
         content = json.dumps(body).encode("utf-8")
@@ -241,13 +243,23 @@ def _synth_response(entry: dict[str, Any]) -> httpx.Response:
         content = body.encode("utf-8")
     else:
         content = b""
-    headers = entry.get("headers") or {}
+    raw_headers = entry.get("headers") or {}
+    # Strip transport-encoding headers — body is already decoded in the cache,
+    # so leaving content-encoding/content-length would make httpx try to
+    # re-decompress and miscount length.
+    headers = {
+        k: v
+        for k, v in raw_headers.items()
+        if k.lower() not in ("content-encoding", "content-length", "transfer-encoding")
+    }
     if not any(k.lower() == "content-type" for k in headers):
         headers = {**headers, "content-type": "application/json"}
+    request = httpx.Request(method=method, url=url) if url else None
     return httpx.Response(
         status_code=int(entry["status"]),
         content=content,
         headers=headers,
+        request=request,
     )
 
 

@@ -24,6 +24,9 @@ dev = [
 llm = [
     "anthropic>=0.34",
 ]
+gemini = [
+    "google-genai>=0.3",
+]
 
 [tool.ruff]
 line-length = 100
