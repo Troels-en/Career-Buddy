@@ -48,7 +48,11 @@ def _select_sql(force: bool, ats: str | None, limit: int | None) -> tuple[str, l
     where = ["is_active = true"]
     params: list[Any] = []
     if not force:
-        where.append("(description is null or length(description) < 100)")
+        # Resume on description-missing OR description-OK-but-requirements-still-empty.
+        where.append(
+            "(description is null or length(description) < 100"
+            " or requirements is null or length(requirements) < 30)"
+        )
     if ats:
         where.append("ats_source = %s")
         params.append(ats)

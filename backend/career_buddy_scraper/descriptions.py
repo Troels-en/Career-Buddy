@@ -30,7 +30,7 @@ _HEADING_OR = (
     r"what\s+we(?:'|’)?re\s+looking\s+for|what\s+we\s+look\s+for|"
     r"about\s+you|your\s+profile|your\s+skills|who\s+you\s+are|"
     r"you\s+have|you(?:'|’)?ll\s+have|"
-    r"must[-\s]?haves?|skills?(?:\s+\&\s+experience)?|experience|"
+    r"must[-\s]?haves?|skills\s+\&\s+experience|required\s+experience|"
     # German
     r"anforderungen|qualifikationen|dein\s+profil|ihr\s+profil|"
     r"was\s+du\s+mitbringst|was\s+sie\s+mitbringen|das\s+bringst\s+du\s+mit|"
@@ -193,13 +193,15 @@ EXTRACTORS = {
 
 
 def extract(ats_source: str, raw_payload: dict[str, Any] | None) -> tuple[str, str]:
-    """Dispatch to the right extractor, return ('','') for unsupported sources."""
+    """Dispatch to the right extractor, return ('','') for unsupported sources.
+
+    Extractor exceptions are NOT swallowed — the CLI catches them per-row so
+    real failures show up in the ``errored`` counter instead of being hidden
+    as ``skipped_no_description``.
+    """
     if not raw_payload or not isinstance(raw_payload, dict):
         return "", ""
     fn = EXTRACTORS.get(ats_source)
     if fn is None:
         return "", ""
-    try:
-        return fn(raw_payload)
-    except Exception:
-        return "", ""
+    return fn(raw_payload)

@@ -105,9 +105,13 @@ type VcJob = {
   ats_source: string;
   posted_date: string | null;
   is_remote: boolean;
+  description: string | null;
+  requirements: string | null;
+  jobTokens: Set<string>;
+  reqTokens: Set<string>;
 };
 
-type ScoredJob = VcJob & { fit: number; why: string };
+type ScoredJob = VcJob & { fit: number; why: string; matched: string[] };
 
 const STORAGE_KEY = "career-buddy-state";
 
@@ -153,6 +157,82 @@ const SEED_APPS: Application[] = [
 ];
 
 const DACH_CITIES = ["berlin", "munich", "münchen", "hamburg", "köln", "cologne", "frankfurt", "vienna", "wien", "zurich", "zürich", "düsseldorf"];
+
+// Minimal stopword list — common English+German function words and resume verbs.
+const STOPWORDS = new Set([
+  "the","and","with","for","your","our","you","this","that","will","are","was",
+  "were","have","has","had","been","they","their","them","what","when","where",
+  "from","into","onto","than","then","such","also","just","very","more","most",
+  "any","some","each","every","both","work","team","company","role","job","new",
+  "one","two","three","across","over","under","using","use","used","like","etc",
+  "able","including","include","required","preferred","candidate","ideal","year",
+  "years","plus","skills","skill","strong","good","great","level","time","need",
+  "want","get","go","know","feel","make","help","take","high","low","well",
+  // Resume-noise verbs
+  "closed","worked","built","led","managed","responsible","drove","scaled",
+  "launched","grew","developed","created","designed","executed","delivered",
+  // German function words
+  "das","der","die","den","dem","des","ein","eine","einer","eines","und","oder",
+  "mit","für","von","im","auf","bei","aus","als","wie","wenn","wir","sie","du",
+  "ihr","unser","haben","hat","ist","sind","sein","werden","wird","kann","können",
+]);
+
+const TOKEN_RE = /[a-zäöüß0-9][a-zäöüß0-9+#./-]{2,}/gi;
+
+function tokenize(text: string): Set<string> {
+  if (!text) return new Set();
+  const out = new Set<string>();
+  for (const m of text.toLowerCase().matchAll(TOKEN_RE)) {
+    const tok = m[0].replace(/[.,;:]+$/, "");
+    if (tok.length < 3) continue;
+    if (STOPWORDS.has(tok)) continue;
+    out.add(tok);
+  }
+  return out;
+}
+
+function buildProfileTokens(profile: Profile): Set<string> {
+  const parts = [
+    ...profile.strengths,
+    ...profile.work_history.flatMap((p) => [p.role, ...p.bullets]),
+    profile.headline,
+    profile.target_role,
+  ];
+  return tokenize(parts.join(" \n "));
+}
+
+// Token-match with light stem-prefix (sales/sale, manager/managers) but no substring.
+function tokensMatch(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (a.length < 5 || b.length < 5) return false;
+  // Strip last char from longer side and prefix-match the shorter side.
+  const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
+  if (Math.abs(a.length - b.length) > 3) return false;
+  return longer.startsWith(shorter.slice(0, Math.max(4, shorter.length - 1)));
+}
+
+function intersect(profile: Set<string>, job: Set<string>): string[] {
+  if (profile.size === 0 || job.size === 0) return [];
+  const matched: string[] = [];
+  // Iterate the smaller set for speed.
+  const [small, large] = profile.size <= job.size ? [profile, job] : [job, profile];
+  for (const t of small) {
+    if (large.has(t)) {
+      matched.push(t);
+      continue;
+    }
+    // Fuzzy fallback only if profile/job both contain stem-similar tokens.
+    if (small === profile) {
+      for (const j of job) {
+        if (tokensMatch(t, j)) {
+          matched.push(t);
+          break;
+        }
+      }
+    }
+  }
+  return Array.from(new Set(matched)).slice(0, 8);
+}
 
 function emptyState(): State {
   return {
@@ -241,7 +321,7 @@ function relativeDays(iso: string | null): string {
   return `${Math.floor(days / 365)}y ago`;
 }
 
-function fitScore(job: VcJob, profile: Profile): number {
+function fitScore(job: VcJob, profile: Profile, profTokens: Set<string>): { score: number; matched: string[] } {
   let score = 5.0;
 
   if (job.role_category && profile.target_role_categories.includes(job.role_category)) {
@@ -269,17 +349,33 @@ function fitScore(job: VcJob, profile: Profile): number {
     else if (days > 90) score -= 0.5;
   }
 
+  // Title-overlap (cheap, always available).
   const haystack = `${job.role} ${job.company}`.toLowerCase();
-  const overlaps = profile.strengths.filter((s) => {
+  const titleOverlaps = profile.strengths.filter((s) => {
     const word = s.toLowerCase().split(/[\s,/-]+/)[0];
     return word.length > 3 && haystack.includes(word);
   }).length;
-  score += Math.min(overlaps * 0.3, 1.0);
+  score += Math.min(titleOverlaps * 0.3, 1.0);
 
-  return Math.max(1.0, Math.min(9.9, Math.round(score * 10) / 10));
+  // JD keyword overlap (Phase B): requirements weighted 2× description.
+  let matched: string[] = [];
+  if (profTokens.size > 0) {
+    const reqMatches = intersect(profTokens, job.reqTokens);
+    const descMatches = intersect(profTokens, job.jobTokens);
+    const reqUnion = new Set(reqMatches);
+    const descOnly = descMatches.filter((m) => !reqUnion.has(m));
+    matched = [...reqMatches, ...descOnly].slice(0, 8);
+    const overlapBoost = Math.min(reqMatches.length * 0.4 + descOnly.length * 0.2, 2.0);
+    score += overlapBoost;
+  }
+
+  return {
+    score: Math.max(1.0, Math.min(9.9, Math.round(score * 10) / 10)),
+    matched,
+  };
 }
 
-function fitWhy(job: VcJob, profile: Profile): string {
+function fitWhy(job: VcJob, profile: Profile, matched: string[]): string {
   const reasons: string[] = [];
   if (job.role_category && profile.target_role_categories.includes(job.role_category)) {
     reasons.push(`role match: ${job.role_category}`);
@@ -293,8 +389,11 @@ function fitWhy(job: VcJob, profile: Profile): string {
     const days = (Date.now() - new Date(job.posted_date).getTime()) / 86_400_000;
     if (days <= 7) reasons.push("posted this week");
   }
+  if (matched.length > 0) {
+    reasons.push(`matched: ${matched.slice(0, 3).join(" · ")}`);
+  }
   if (reasons.length === 0) return "Review JD to see if it fits.";
-  return reasons.slice(0, 3).join(" · ");
+  return reasons.slice(0, 4).join(" · ");
 }
 
 export default function CareerBuddy() {
@@ -329,7 +428,7 @@ export default function CareerBuddy() {
     void (async () => {
       const { data, error } = await supabase
         .from("jobs")
-        .select("company_name, role_title, role_category, location, url, ats_source, posted_date, is_remote")
+        .select("company_name, role_title, role_category, location, url, ats_source, posted_date, is_remote, description, requirements")
         .eq("is_active", true)
         .order("posted_date", { ascending: false, nullsFirst: false })
         .limit(60);
@@ -346,18 +445,29 @@ export default function CareerBuddy() {
         ats_source: string;
         posted_date: string | null;
         is_remote: boolean | null;
+        description: string | null;
+        requirements: string | null;
       }>;
       setJobs(
-        rows.map((r) => ({
-          company: r.company_name,
-          role: r.role_title,
-          role_category: r.role_category,
-          location: r.location ?? "—",
-          url: r.url,
-          ats_source: r.ats_source,
-          posted_date: r.posted_date,
-          is_remote: r.is_remote === true,
-        })),
+        rows.map((r) => {
+          // Tokenize once at fetch time; intersection per render is O(min).
+          const desc = (r.description ?? "").slice(0, 4000);
+          const reqs = (r.requirements ?? "").slice(0, 2000);
+          return {
+            company: r.company_name,
+            role: r.role_title,
+            role_category: r.role_category,
+            location: r.location ?? "—",
+            url: r.url,
+            ats_source: r.ats_source,
+            posted_date: r.posted_date,
+            is_remote: r.is_remote === true,
+            description: r.description,
+            requirements: r.requirements,
+            jobTokens: tokenize(`${r.role_title} ${desc}`),
+            reqTokens: tokenize(reqs),
+          };
+        }),
       );
     })();
   }, []);
@@ -525,13 +635,19 @@ export default function CareerBuddy() {
     setTimeout(() => setInsightsShimmer(false), 300);
   }
 
+  const profTokens = useMemo(() => buildProfileTokens(state.profile), [state.profile]);
+
   const rankedJobs: ScoredJob[] = useMemo(() => {
     return jobs
-      .map((j) => ({
-        ...j,
-        fit: fitScore(j, state.profile),
-        why: fitWhy(j, state.profile),
-      }))
+      .map((j) => {
+        const { score, matched } = fitScore(j, state.profile, profTokens);
+        return {
+          ...j,
+          fit: score,
+          matched,
+          why: fitWhy(j, state.profile, matched),
+        };
+      })
       .sort((a, b) => {
         if (b.fit !== a.fit) return b.fit - a.fit;
         const ad = a.posted_date ? new Date(a.posted_date).getTime() : 0;
@@ -539,7 +655,7 @@ export default function CareerBuddy() {
         return bd - ad;
       })
       .slice(0, 30);
-  }, [jobs, state.profile]);
+  }, [jobs, state.profile, profTokens]);
 
   const topThreshold = rankedJobs[2]?.fit ?? 0;
 
