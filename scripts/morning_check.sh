@@ -59,7 +59,17 @@ fi
 echo
 echo "→ Tier-2 reclassify (best-effort, stops at quota)"
 cd backend
-uv run python -m career_buddy_scraper.cli.classify_tier2 || true
+# Quota exhaustion (Gemini 429) is expected on Free Tier — classify_tier2
+# returns 1 cleanly with a red log when that happens. Anything else
+# (parse error, DB connection, code crash) is unexpected — bubble up.
+set +e
+uv run python -m career_buddy_scraper.cli.classify_tier2
+rc=$?
+set -e
+if [[ "$rc" -ne 0 && "$rc" -ne 1 ]]; then
+  echo "✗ Tier-2 classifier exited unexpectedly with code $rc"
+  exit "$rc"
+fi
 
 echo
 echo "→ Counts"
