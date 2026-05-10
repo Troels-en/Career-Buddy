@@ -8,44 +8,109 @@
  * overrides --background / --foreground / --primary etc., so
  * existing app pages render unchanged.
  *
- * Palette: cool, light sage greens — Career-Buddy's "buddy" feel.
- * Tokens documented in docs/design/design-system.md.
+ * THEME-SWAP ARCHITECTURE (Codex-pinned, 2026-05-10):
+ *   - Tailwind v4 `@theme inline` is GLOBAL and does NOT support
+ *     scoped selectors. So we cannot put per-theme palette VALUES
+ *     inside `@theme inline`.
+ *   - Solution: palette + glass tints live in plain CSS variable
+ *     blocks scoped by `[data-theme="..."]`, using the
+ *     `--cinema-*` / `--glass-*` prefix (no `color-`).
+ *   - `@theme inline` REGISTERS Tailwind utilities by mapping
+ *     `--color-cinema-*` and `--color-glass-*` to the per-theme
+ *     intermediate vars: `--color-cinema-moss: var(--cinema-moss)`.
+ *   - `<html data-theme="sage">` (default) or `data-theme="onyx"`
+ *     swaps the entire app skin without touching component files.
+ *   - Mixing the two prefixes inside one `[data-theme]` block
+ *     silently breaks the Tailwind utility — keep the convention
+ *     (intermediate = `--cinema-*` / `--glass-*`; registered =
+ *     `--color-cinema-*` / `--color-glass-*`).
  */
 
+/* ── Token registration (Tailwind v4) ──
+ * Registers the utilities (`bg-cinema-moss`, `text-cinema-ink`,
+ * `bg-glass-mist`, etc.) by referencing the per-theme intermediate
+ * variables defined in the `[data-theme="..."]` blocks below. */
 @theme inline {
-  /* Cinema palette (oklch) — soft, cool, sage-leaning */
-  --color-cinema-moss:      oklch(0.22 0.025 160);
-  --color-cinema-pine:      oklch(0.42 0.06 155);
-  --color-cinema-sage:      oklch(0.74 0.05 152);
-  --color-cinema-mint:      oklch(0.87 0.04 155);
-  --color-cinema-mist:      oklch(0.95 0.02 155);
-  --color-cinema-cream:     oklch(0.975 0.012 150);
-  --color-cinema-meadow:    oklch(0.78 0.12 148);
-  --color-cinema-ink:       oklch(0.18 0.018 165);
-  --color-cinema-ink-soft:  oklch(0.36 0.015 165);
-  --color-cinema-ink-mute:  oklch(0.55 0.012 165);
+  /* Cinema palette */
+  --color-cinema-moss:      var(--cinema-moss);
+  --color-cinema-pine:      var(--cinema-pine);
+  --color-cinema-sage:      var(--cinema-sage);
+  --color-cinema-mint:      var(--cinema-mint);
+  --color-cinema-mist:      var(--cinema-mist);
+  --color-cinema-cream:     var(--cinema-cream);
+  --color-cinema-meadow:    var(--cinema-meadow);
+  --color-cinema-ink:       var(--cinema-ink);
+  --color-cinema-ink-soft:  var(--cinema-ink-soft);
+  --color-cinema-ink-mute:  var(--cinema-ink-mute);
 
-  /* Glass tints (rgba — partner with backdrop-filter).
-   * Cool, almost-white with a green wash. */
-  --color-glass-mist:         rgba(238, 244, 234, 0.72);
-  --color-glass-sage:         rgba(190, 213, 195, 0.58);
-  --color-glass-dark:         rgba(28, 38, 30, 0.62);
-  --color-glass-stroke-light: rgba(255, 255, 255, 0.55);
-  --color-glass-stroke-dark:  rgba(0, 0, 0, 0.18);
+  /* Glass tints */
+  --color-glass-mist:         var(--glass-mist);
+  --color-glass-sage:         var(--glass-sage);
+  --color-glass-dark:         var(--glass-dark);
+  --color-glass-stroke-light: var(--glass-stroke-light);
+  --color-glass-stroke-dark:  var(--glass-stroke-dark);
 
-  /* Blur scale */
+  /* Blur scale (theme-independent) */
   --blur-glass-soft:  12px;
   --blur-glass:       20px;
   --blur-glass-heavy: 36px;
 
-  /* Radii */
+  /* Radii (theme-independent) */
   --radius-glass:    1.25rem;
   --radius-glass-lg: 1.75rem;
   --radius-pill:     9999px;
 
-  /* Type stack */
+  /* Type stack (theme-independent) */
   --font-cinema-display: "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif;
   --font-cinema-body:    "Inter", "SF Pro Text",    system-ui, -apple-system, sans-serif;
+}
+
+/* ── Theme: sage (default) ──
+ * Soft, cool, sage-leaning greens. Career-Buddy's "buddy" feel —
+ * Startup-early-stage / Operator-track persona. */
+:root,
+[data-theme="sage"] {
+  --cinema-moss:      oklch(0.22 0.025 160);
+  --cinema-pine:      oklch(0.42 0.06 155);
+  --cinema-sage:      oklch(0.74 0.05 152);
+  --cinema-mint:      oklch(0.87 0.04 155);
+  --cinema-mist:      oklch(0.95 0.02 155);
+  --cinema-cream:     oklch(0.975 0.012 150);
+  --cinema-meadow:    oklch(0.78 0.12 148);
+  --cinema-ink:       oklch(0.18 0.018 165);
+  --cinema-ink-soft:  oklch(0.36 0.015 165);
+  --cinema-ink-mute:  oklch(0.55 0.012 165);
+
+  --glass-mist:         rgba(238, 244, 234, 0.72);
+  --glass-sage:         rgba(190, 213, 195, 0.58);
+  --glass-dark:         rgba(28, 38, 30, 0.62);
+  --glass-stroke-light: rgba(255, 255, 255, 0.55);
+  --glass-stroke-dark:  rgba(0, 0, 0, 0.18);
+}
+
+/* ── Theme: onyx ──
+ * Deep navy + warm gold accents + dark-mirror glass. IB / PE /
+ * Late-stage VC persona — quiet luxury, glass-office-at-dusk vibe.
+ * Page bg stays light (cool off-white) so prose remains readable;
+ * accents (moss / pine / meadow) carry the Onyx mood via dark-navy
+ * CTA fills + gold underlines. */
+[data-theme="onyx"] {
+  --cinema-moss:      oklch(0.20 0.040 250);
+  --cinema-pine:      oklch(0.32 0.060 245);
+  --cinema-sage:      oklch(0.55 0.050 250);
+  --cinema-mint:      oklch(0.83 0.040  80);
+  --cinema-mist:      oklch(0.96 0.012 250);
+  --cinema-cream:     oklch(0.985 0.008 80);
+  --cinema-meadow:    oklch(0.78 0.110  80);
+  --cinema-ink:       oklch(0.15 0.040 250);
+  --cinema-ink-soft:  oklch(0.36 0.025 250);
+  --cinema-ink-mute:  oklch(0.55 0.018 250);
+
+  --glass-mist:         rgba(245, 248, 252, 0.74);
+  --glass-sage:         rgba(201, 169, 107, 0.55);
+  --glass-dark:         rgba(12,  19,  32,  0.66);
+  --glass-stroke-light: rgba(255, 255, 255, 0.55);
+  --glass-stroke-dark:  rgba(0, 0, 0, 0.22);
 }
 
 /*

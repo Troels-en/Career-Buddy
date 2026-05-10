@@ -99,9 +99,31 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+// Cinema theme registry — keep in sync with the [data-theme="..."]
+// blocks in src/styles/cinema.css. Sage is the default; everything
+// else is opt-in via ?theme=onyx (Phase 4 prototype).
+const KNOWN_THEMES = new Set(["sage", "onyx"]);
+
+function readThemeFromUrl(): string {
+  if (typeof window === "undefined") return "sage";
+  try {
+    const param = new URL(window.location.href).searchParams.get("theme");
+    if (param && KNOWN_THEMES.has(param)) return param;
+    const stored = window.localStorage.getItem("career-buddy-theme-v1");
+    if (stored && KNOWN_THEMES.has(stored)) return stored;
+  } catch {
+    /* ignore */
+  }
+  return "sage";
+}
+
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    // Default attribute is `sage` so SSR + first-paint render the
+    // existing theme. The client effect in <RootComponent/> swaps to
+    // the requested theme without a hydration mismatch (it just
+    // re-writes the attribute on a DOM node).
+    <html lang="en" data-theme="sage">
       <head>
         <HeadContent />
       </head>
@@ -115,6 +137,17 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const theme = readThemeFromUrl();
+    document.documentElement.setAttribute("data-theme", theme);
+    try {
+      window.localStorage.setItem("career-buddy-theme-v1", theme);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
