@@ -1,16 +1,18 @@
-import { Briefcase, MessageCircle, Upload, User } from "lucide-react";
+import { MessageCircle, User } from "lucide-react";
 
 type NavTarget = {
   label: string;
   href: string;
-  Icon: typeof Briefcase;
+  Icon: typeof User;
 };
 
+// IA cleanup (Phase 0):
+// - "Overview" dropped — the Career-Buddy logo IS the home link.
+// - "CV" dropped — folded into Profile (CV upload lives there now).
+// - "Chat" renamed to "Buddy" — friendlier, matches the product voice.
 const TARGETS: NavTarget[] = [
-  { label: "Overview", href: "/", Icon: Briefcase },
   { label: "Profile", href: "/profile", Icon: User },
-  { label: "CV", href: "/cv", Icon: Upload },
-  { label: "Chat", href: "/chat", Icon: MessageCircle },
+  { label: "Buddy", href: "/buddy", Icon: MessageCircle },
 ];
 
 /**

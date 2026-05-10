@@ -53,7 +53,7 @@ function DesignPreviewPage() {
         cta={
           <>
             <PillLink href="/">Open Overview</PillLink>
-            <PillLink href="/chat" variant="soft">
+            <PillLink href="/buddy" variant="soft">
               Talk to Buddy
             </PillLink>
           </>
@@ -214,7 +214,7 @@ function DesignPreviewPage() {
               </div>
               <div className="mt-8 md:mt-0 flex flex-wrap gap-3">
                 <PillLink href="/cv">Upload CV</PillLink>
-                <PillLink href="/chat" variant="soft">
+                <PillLink href="/buddy" variant="soft">
                   Ask Buddy first
                 </PillLink>
               </div>

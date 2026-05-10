@@ -16,8 +16,7 @@ const FOOTER_IMAGE_DEFAULT =
 const PAGES = [
   { href: "/", label: "Overview" },
   { href: "/profile", label: "Profile" },
-  { href: "/cv", label: "CV" },
-  { href: "/chat", label: "Chat" },
+  { href: "/buddy", label: "Buddy" },
 ];
 
 const BUILT_FOR = [

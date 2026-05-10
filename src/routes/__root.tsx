@@ -130,8 +130,6 @@ function RootComponent() {
       <div className="min-h-screen flex flex-col bg-cinema-mist">
         <PromoBar
           message="9,980 live operator-track roles · refreshed every night"
-          href="/"
-          cta="See live"
         />
         <Nav />
         <main className="flex-1">

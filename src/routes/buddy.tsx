@@ -5,12 +5,12 @@ import { Loader2, Send, Sparkles } from "lucide-react";
 import { GlassCard } from "@/components/cinema";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/chat")({
+export const Route = createFileRoute("/buddy")({
   component: ChatPage,
   head: () => ({
     meta: [
-      { title: "Career-Buddy — Chat" },
-      { name: "description", content: "Ask Career-Buddy what to do next." },
+      { title: "Career-Buddy — Buddy" },
+      { name: "description", content: "Talk to Buddy — ask anything about your search, your CV, your next role." },
     ],
   }),
 });
