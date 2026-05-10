@@ -11,6 +11,8 @@ import {
   SectionDivider,
 } from "@/components/cinema";
 import { CvUploadInline } from "@/components/profile/CvUploadInline";
+import { EmailAccounts } from "@/components/profile/EmailAccounts";
+import { ThemePicker } from "@/components/profile/ThemePicker";
 import { usePhoto } from "@/lib/cinema-theme";
 import {
   loadSelectedTracks,
@@ -279,6 +281,65 @@ function ProfilePage() {
               </div>
               <CvUploadInline />
             </GlassPanel>
+          </RevealOnScroll>
+        </div>
+      </section>
+
+      <SectionDivider from="cream" to="white" />
+
+      {/* Section 5 — Email accounts (Phase 1.5 stub) */}
+      <section id="email" className="bg-white scroll-mt-24">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 py-20 md:py-24 grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
+          <RevealOnScroll className="md:col-span-5">
+            <div className="text-cinema-eyebrow text-cinema-ink-mute mb-4">
+              05 — Email
+            </div>
+            <h2 className="text-cinema-h1 mb-4">
+              <span className="cinema-headline-underline">
+                Connect your inbox.
+              </span>
+            </h2>
+            <p className="text-cinema-body">
+              Buddy can read replies, draft outreach from your address,
+              and surface interview invites in your tracker — once your
+              email is connected. Multiple accounts supported, set a
+              primary, disconnect any time.
+            </p>
+          </RevealOnScroll>
+          <RevealOnScroll delay={120} className="md:col-span-7">
+            <EmailAccounts />
+          </RevealOnScroll>
+        </div>
+      </section>
+
+      <SectionDivider from="white" to="cream" />
+
+      {/* Section 6 — Theme picker (Phase 4 step 3) */}
+      <section id="theme" className="bg-cinema-cream scroll-mt-24">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 py-20 md:py-24 grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
+          <RevealOnScroll className="md:col-span-5">
+            <div className="text-cinema-eyebrow text-cinema-ink-mute mb-4">
+              06 — Theme
+            </div>
+            <h2 className="text-cinema-h1 mb-4">
+              <span className="cinema-headline-underline">
+                Pick the world
+              </span>{" "}
+              you're heading into.
+            </h2>
+            <p className="text-cinema-body mb-3">
+              Career-Buddy re-skins itself per persona — colour palette,
+              hero photography, hover accents — so the app feels like it
+              belongs to your track.
+            </p>
+            <p className="text-cinema-body">
+              Sage for early-stage operator. Onyx for IB / PE / late-stage
+              VC. Slate for consulting. Coral for brand / creative / D2C.
+              Pick anytime; the UI swaps live.
+            </p>
+          </RevealOnScroll>
+          <RevealOnScroll delay={120} className="md:col-span-7">
+            <ThemePicker />
           </RevealOnScroll>
         </div>
       </section>
