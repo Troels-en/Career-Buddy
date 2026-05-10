@@ -70,25 +70,36 @@ export function CinematicHero({
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            // moss top fade → cream bottom fade. Keeps the hero readable
-            // and softly merges into the next cream/mist section.
+            // moss top fade → cream bottom fade. Top opacity bumped to
+            // 0.55 + adds a second 25%-stop so light photography (Slate,
+            // Coral) keeps a legible cream headline. Bottom keeps the
+            // soft merge into the next cream/mist section.
             background:
-              "linear-gradient(180deg, rgba(28,38,30,0.45) 0%, rgba(28,38,30,0.10) 38%, rgba(243,247,241,0.0) 75%, rgba(243,247,241,0.85) 100%)",
+              "linear-gradient(180deg, rgba(20,28,24,0.60) 0%, rgba(20,28,24,0.30) 28%, rgba(20,28,24,0.10) 55%, rgba(243,247,241,0.0) 78%, rgba(243,247,241,0.85) 100%)",
           }}
           aria-hidden
         />
         <div className="absolute inset-0 flex items-end">
           <div className="max-w-7xl w-full mx-auto px-6 md:px-12 pb-20 md:pb-28">
             {eyebrow && (
-              <div className="text-cinema-eyebrow text-cinema-cream/85 mb-6">
+              <div
+                className="text-cinema-eyebrow text-cinema-cream/85 mb-6"
+                style={{ textShadow: "0 1px 8px rgba(0,0,0,0.45)" }}
+              >
                 {eyebrow}
               </div>
             )}
-            <h1 className="text-cinema-display text-cinema-cream max-w-5xl">
+            <h1
+              className="text-cinema-display text-cinema-cream max-w-5xl"
+              style={{ textShadow: "0 2px 24px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.30)" }}
+            >
               <span className="cinema-headline-underline">{headline}</span>
             </h1>
             {subhead && (
-              <p className="text-cinema-body text-cinema-cream/85 max-w-xl mt-6">
+              <p
+                className="text-cinema-body text-cinema-cream/85 max-w-xl mt-6"
+                style={{ textShadow: "0 1px 12px rgba(0,0,0,0.40)" }}
+              >
                 {subhead}
               </p>
             )}
