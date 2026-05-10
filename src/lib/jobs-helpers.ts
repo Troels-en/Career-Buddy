@@ -11,7 +11,11 @@
  *  - {@link profileSignature} — deterministic hash of fitness-affecting fields
  */
 
+import type { Database } from "@/integrations/supabase/types";
+
 import { ApplicationStatus } from "./format";
+
+type ApplicationsInsert = Database["public"]["Tables"]["applications"]["Insert"];
 
 // ---------------------------------------------------------------------------
 // Structural types — subsets compatible with CareerBuddy.tsx Profile +
@@ -107,7 +111,7 @@ export function profileCompleteness(profile: CompletenessProfile): {
  * Application → Supabase row shape (snake_case columns,
  * `client_id`-keyed for the single-user phase).
  */
-export function applicationToRow(a: ApplicationRowSource): Record<string, unknown> {
+export function applicationToRow(a: ApplicationRowSource): ApplicationsInsert {
   return {
     client_id: a.id,
     company: a.company,
