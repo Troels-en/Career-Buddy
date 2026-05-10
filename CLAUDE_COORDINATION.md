@@ -206,6 +206,26 @@ proceeds with 7–9 immediately on top.
 
 ## Last sync
 
+- 2026-05-10 night (round 10 — B partial) — B shipped RTL test
+  coverage for the round-9 components: `src/routes/profile.test.tsx`
+  (11 new tests covering Section 03 empty/populated/level/years/
+  count + init + onAnalysed refresh) and a full rewrite of
+  `src/components/profile/CvUploadInline.test.tsx` (9 tests now
+  mocking `@/lib/profile-store` directly to assert
+  `setProfileFromAnalysis` is called with the right shape +
+  `onAnalysed` callback fires on success / skips on persist error).
+  Frontend tests now **273 passing** (260 → 273). tsc clean.
+  **Subject-line flag:** these two test files actually landed inside
+  commit `1ed7033` (titled "docs(coord): register session D —
+  scraper coverage expansion") rather than a dedicated `test(...)`
+  commit, because session D's coord-register commit swept up B's
+  staged tests at git-add time. Content is correct; the misleading
+  subject is the only artefact. Same class of bundle as `a8cd7f5`
+  (round-8 cinema-theme sweep). No revert needed.
+
+  Lazy-chunks Playwright spec (round-10 task B) still pending. Will
+  ship next as a clean `test(e2e): ...` commit.
+
 - 2026-05-10 late evening (round 9) — A wired the UI half of the
   CV-profile-Supabase ask (tasks 7–9). Commits pushed:
   - `8a437e9` feat(profile): wire Section 03 Skills + Supabase
