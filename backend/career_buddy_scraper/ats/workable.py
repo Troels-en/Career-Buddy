@@ -4,10 +4,12 @@ Endpoint:  https://apply.workable.com/api/v3/accounts/<slug>/jobs (POST)
 Detection: ``apply.workable.com/<slug>`` patterns.
 Auth:      none.
 
-Pagination contract (workplan v6 Step 2c, per Codex 3 finding 4):
+Pagination contract:
 
-- POST body: ``{"limit": 100}`` for page 1; subsequent pages add
-  ``{"nextPage": <token>}``.
+- POST body: ``{}`` for page 1; subsequent pages send ``{"nextPage":
+  <token>}``. The v3 API rejects ``{"limit": N}`` with HTTP 400
+  ``{"limit":"Not allowed"}`` — the parameter was removed at some
+  point. Page size is server-controlled.
 - Stop when the response has no ``nextPage`` key, ``nextPage`` is falsy,
   the same token has already been seen this run (loop guard), or the
   ``MAX_PAGES`` cap is reached.
@@ -42,7 +44,7 @@ class WorkableAdapter:
         seen_tokens: set[str] = set()
         next_page: str | None = None
         for page_index in range(MAX_PAGES):
-            body: dict[str, Any] = {"limit": 100}
+            body: dict[str, Any] = {}
             if next_page is not None:
                 body["nextPage"] = next_page
             resp = await client.post(url, json=body)
