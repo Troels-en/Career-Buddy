@@ -13,11 +13,11 @@
  *      router stops code-splitting, all routes load the same chunk
  *      set and this assertion fires.
  *
- * Pre-condition: a deployed (or local-preview) build serving the
- * route chunks `profile-*.js`, `buddy-*.js`, `jobs-*.js`, etc. The
- * spec defaults to the live Cloudflare Worker
- * (`https://career-buddy.enigkt1.workers.dev`) so it runs without a
- * local preview pipeline; set `PLAYWRIGHT_BASE_URL` to override.
+ * Pre-condition: playwright.config.ts spins up `bun run build &&
+ * bun run preview` (with the dist/server/index.js → server.js copy
+ * workaround) so the spec hits a real built bundle. Override via
+ * `PLAYWRIGHT_BASE_URL` to point at the live Cloudflare Worker or a
+ * staging env; when overridden the local webServer is skipped.
  *
  * Byte-budget assertions are intentionally deferred until the
  * extraction round lands a fresh baseline — the current entry chunk
@@ -25,8 +25,6 @@
  * CvUploadInline + profile-store) since `docs/iter-3-bundle-
  * baseline.txt` was captured.
  */
-
-const TARGET_URL = process.env.PLAYWRIGHT_BASE_URL ?? "https://career-buddy.enigkt1.workers.dev";
 
 import { expect, test, type Page } from "@playwright/test";
 
@@ -68,7 +66,7 @@ async function captureJsRequests(
 test.describe("lazy chunks", () => {
   test("/ does NOT pull route-specific chunks (profile / buddy / jobs)", async ({ page }) => {
     const { matched, all } = await captureJsRequests(page, async () => {
-      await page.goto(`${TARGET_URL}/`);
+      await page.goto("/");
     });
     expect(
       all.length,
@@ -81,7 +79,7 @@ test.describe("lazy chunks", () => {
 
   test("/profile loads at least one unique profile chunk", async ({ page }) => {
     const { matched } = await captureJsRequests(page, async () => {
-      await page.goto(`${TARGET_URL}/profile`);
+      await page.goto("/profile");
     });
     expect(
       matched.profile.length,
@@ -91,7 +89,7 @@ test.describe("lazy chunks", () => {
 
   test("/buddy loads at least one unique buddy chunk", async ({ page }) => {
     const { matched } = await captureJsRequests(page, async () => {
-      await page.goto(`${TARGET_URL}/buddy`);
+      await page.goto("/buddy");
     });
     expect(
       matched.buddy.length,
@@ -101,7 +99,7 @@ test.describe("lazy chunks", () => {
 
   test("/jobs loads at least one unique jobs chunk", async ({ page }) => {
     const { matched } = await captureJsRequests(page, async () => {
-      await page.goto(`${TARGET_URL}/jobs`);
+      await page.goto("/jobs");
     });
     expect(
       matched.jobs.length,
