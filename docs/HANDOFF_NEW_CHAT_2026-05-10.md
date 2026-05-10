@@ -68,52 +68,26 @@ Initial blacklist (manual SQL):
 
 Commit `d565f9b feat(vcs): skip_probe flag — systematic out-of-scope blacklist` — pushed.
 
-### 4. Morning check (in progress at hand-off)
+### 4. Morning check (DONE)
 
-`bash scripts/morning_check.sh` started 09:07 CEST after the Gemini
-Free Tier daily quota reset (00:00 PT = 09:00 CEST). Background task
-`bw4oiikno`; full log `/tmp/morning_check.log`.
+`bash scripts/morning_check.sh` ran 09:07–09:32 CEST after the Gemini
+Free Tier daily quota reset.
 
-So far:
-
+**Edge functions:** all 3 healthy.
 - analyze-cv → HTTP 200 ✓
 - match-job → HTTP 200 ✓
 - draft-message → HTTP 200 ✓
-- "✓ All edge functions healthy."
-- Tier-2 reclassify started against 9,578 pending titles. Batch progress at hand-off (09:31 CEST):
 
-| Batch | Updated | Other |
-|-------|---------|-------|
-| 0-500 | 10 | 490 |
-| 500-1000 | 0 (JSON parse error) | 500 |
-| 1000-1500 | 21 | 479 |
-| 1500-2000 | 30 | 470 |
-| 2000-2500 | 39 | 461 |
-| 2500-3000 | 11 | 489 |
-| 3000-3500 | 20 | 480 |
-| 3500-4000 | 13 | 487 |
-| 4000-4500 | **113** | 387 |
-| 4500-5000 | 20 | 480 |
-| 5000-5500 | 26 | 474 |
-| 5500-6000 | 20 | 480 |
-| 6000-6500 | 11 | 489 |
-| 6500-7000 | 41 | 459 |
+**Tier-2 reclassify** (16 of ~19 batches before quota exhausted):
 
-Running total at hand-off: ~375 updated, ~6,625 classified-as-other,
-~2,500-3,000 still to process. Expected ~6 more batches before either
-quota hits or all 9,578 are done.
-
-When the new session starts, **first action** is:
-
-```bash
-ps -p $(pgrep -f classify_tier2 | head -1) -o pid,etime,state
-tail -50 /tmp/morning_check.log
+```
+Tier-2 done: updated 481, classified-as-other 7518, quota-hit=True
+→ Counts
+jobs.is_active = 9980, role_category specific = 883 (8%)
 ```
 
-If the process has exited, the final lines will include
-`Tier-2 done: updated <N>, classified-as-other <M>, quota-hit=...`
-followed by `→ Counts` and `jobs.is_active = ..., role_category specific = ...`.
-Update the headline numbers in this doc.
+Quota resets again in ~9h45m (next morning ~07:00 CEST). ~1,579 jobs
+still `tier2_pending` — finish on next morning_check.sh run.
 
 ## Stack decision (unchanged)
 
@@ -195,9 +169,6 @@ Uncommitted:
   - `project_round3_scrape_20260509.md`
   - `feedback_scraper_systematic_fixes.md`
 
-## Background processes still running at hand-off
+## Background processes at hand-off
 
-- `bw4oiikno` — `morning_check.sh` (Tier-2 reclassify in batches). ETA ~3-5 min remaining if quota holds; otherwise stops cleanly.
-- Monitor `bgl11n00t` watching `/tmp/morning_check.log`. May fire stale events into the new session — ignore the timeout notification.
-
-Pop these from the new session's task list once Tier-2 exits.
+All clear. `morning_check.sh` exited cleanly. No pending background tasks.
