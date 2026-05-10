@@ -131,18 +131,24 @@ proceeds with 7–9 immediately on top.
       `CvUploadInline` now persists via `setProfileFromAnalysis`,
       `/profile` Section 03 renders live skills chips,
       `initProfileFromSupabase` runs on mount, smoke verified)
-- [x] Phase 3 deep — `/jobs` standalone (round 12, `51f9e1d`).
-      `JobsFeed` fetches + filters + sorts jobs directly, no
-      `<CareerBuddy rolesOnly />` mount. Browse + filter + sort lives
-      on /jobs; AI fit + tracker stay on Overview with a nudge link.
-- [ ] Monolith child components extraction (progress: 2/9 done).
-      Done: JobCard + FilterBar → `src/components/jobs/*` (round 12,
-      `7eef6d0` — Overview now imports the extracted versions; monolith
-      down 2,449 → 1,988 lines).
-      Remaining: DraftModal / ApplicationsTracker / ApplicationRow /
-      AddAppModal / ProfileCard / EditProfileModal / InsightsPanel —
-      UI session decides when to start; B follows with RTL tests per
-      pattern.
+- [x] Phase 3 deep — `/jobs` standalone (round 12, `51f9e1d`)
+      + server-side filter/search (round 13, `a5062ae`). JobsFeed
+      now translates every filter dimension into a PostgREST query
+      (.in / .ilike / .gte / .eq / .overlaps); tight filters return
+      the full matching set instead of being trapped behind the
+      1,000-row max-rows cap. Sort fit → client-side (profile-aware);
+      all other sorts handed to PostgREST.
+- [x] Monolith child components extraction (9/9 done, round 13).
+      Round 12: JobCard + FilterBar → `src/components/jobs/*`
+      (`7eef6d0`).
+      Round 13: ProfileCard + EditProfileModal →
+      `src/components/profile/*`; ApplicationsTracker +
+      ApplicationRow + AddAppModal → `src/components/applications/*`;
+      InsightsPanel → `src/components/insights/*`; DraftModal →
+      `src/components/drafts/*` (`f463de0`). Monolith down
+      2,449 → 985 lines (~-60%). Helpers (ProfileLine,
+      CompletenessMeter, Section, Field, BulletEditor,
+      PositionEditor) co-located with their primary consumer.
 - [x] Voice input (Web Speech API) — Phase 1 (round 10/11 —
       `2adfd52` bundled the diff under a misleading
       "round-10 complete" coord subject; voice work is shipped:
@@ -151,14 +157,27 @@ proceeds with 7–9 immediately on top.
       paste textarea, `voice-mic-pulse` reduced-motion-safe
       animation in `cinema.css`, graceful fallback when
       `window.SpeechRecognition` is missing)
-- [x] Floating Buddy widget (Phase 2, round 12, `fec6c67`).
-      `src/components/buddy/FloatingBuddy.tsx` mounts the bubble
-      bottom-right on every route except /buddy itself; slide-out
-      panel shows 4 starter prompts that route to /buddy?prefill=…
-      with the composer seeded. Escape + overlay close. Reduced-motion
-      respected. Phase 6 will replace the launcher panel with an
-      inline mini-chat.
-- [ ] Skills probe + voice everywhere — Phase 6
+- [x] Floating Buddy widget (Phase 2, round 12, `fec6c67`) +
+      inline mini-chat (Phase 6, round 13, `6a148a2`). Panel now
+      contains a real send/receive composer sharing localStorage
+      history with /buddy via the new
+      `src/components/buddy/chat-helpers.ts` module
+      (loadHistory / saveHistory / readQuota / writeQuota /
+      probeShim / sendBuddyMessage). Starter pills show when
+      history is empty; clicking one fires send() in-place
+      instead of routing. Shim status pill + open-full-page link
+      in the header.
+- [x] Skills probe (Phase 6, round 13, `2cb6f29`). /profile
+      Section 03 skill chips now `window.dispatchEvent("open-buddy",
+      { prefill })`. FloatingBuddy listens, opens the panel, seeds
+      the composer with "Tell me about my <skill> experience…"
+      so the user can probe any extracted skill without leaving
+      /profile.
+- [x] Skills probe — Phase 6 (round 13, `2cb6f29`). Voice on /buddy
+      + CV-paste textarea already shipped in `2adfd52`. Voice on
+      every other text input (Phase 1 hard-spec) deferred — Buddy
+      composer + profile editor inputs would benefit but it's
+      lower-priority polish vs the rest of the loop.
 - [ ] Photo licensing audit (Unsplash Free → Unsplash+ or AI-generated
       production set)
 
@@ -220,6 +239,45 @@ proceeds with 7–9 immediately on top.
   `6982329` (now in `src/lib/types.ts` + `src/lib/state.ts`).
 
 ## Last sync
+
+- 2026-05-10 night (round 13 — A) — A shipped four big back-to-back
+  pushes covering the remaining A backlog:
+  - `a5062ae` feat(jobs): Phase 3 deep — server-side filter/search.
+    JobsFeed now fires a fresh PostgREST query per filter change with
+    .in / .ilike / .gte / .eq / .overlaps; tight filter sets (e.g.
+    "Senior Berlin Python") return the full matching pool instead of
+    being cut off at the 1,000-row max-rows cap. Sort fit handled
+    client-side; recency/company/years/salary handed to PostgREST.
+    250ms debounce + reqId stale-drop. Heading flips from
+    "N of N live operator-track roles" to
+    "N of N matching live roles" when filters are active.
+  - `f463de0` refactor(monolith): extract 7 child components from
+    CareerBuddy.tsx. New `src/components/{applications,drafts,
+    insights}/*` + `src/components/profile/{ProfileCard,
+    EditProfileModal}.tsx`. Monolith 1,988 → 985 lines
+    (cumulative -60% since round 11). All inline helpers
+    (ProfileLine / CompletenessMeter / Section / Field /
+    BulletEditor / PositionEditor) co-located with their primary
+    consumer. The remaining 985 lines in CareerBuddy.tsx are the
+    page-level orchestrator — state, hydration, supabase fetches,
+    shim probe, JSX layout.
+  - `6a148a2` feat(buddy): Phase 6 — inline mini-chat in FloatingBuddy
+    + new `src/components/buddy/chat-helpers.ts` lifting the
+    localStorage history + quota + shim probe + send-with-fallback
+    out of the route. Both /buddy and the floating panel now share
+    one chat history and one quota state. Panel header shows shim
+    status pill + open-full link.
+  - `2cb6f29` feat(buddy): Phase 6 — skills-probe entry point. Any
+    component on the page can `window.dispatchEvent("open-buddy",
+    { detail: { prefill } })`; FloatingBuddy listens and opens with
+    the composer seeded. /profile Section 03 chips wire up as the
+    first consumer ("Tell me about my <skill> experience…").
+  Tests now 321 passing. tsc clean. Build green. Live HTTP/2 200 on
+  /, /jobs, /profile, /buddy. Open A items left: voice mic on every
+  text input (Phase 1 polish) + photo licensing audit (user pinned
+  current Unsplash Free in B chat). A idle.
+
+
 
 - 2026-05-10 night (round 12 — A) — three big A pushes back-to-back:
   - `51f9e1d` feat(jobs): Phase 3 — standalone /jobs feed. New
