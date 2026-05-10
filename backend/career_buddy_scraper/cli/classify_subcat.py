@@ -47,20 +47,79 @@ from ..claude_cli import (
     ParseError,
     RateLimited,
     Timeout,
+    _extract_json,
+    _looks_rate_limited,
 )
 from ..db import connect, load_env
 
 
 class _ClaudeCliBare(ClaudeCli):
-    """Subprocess wrapper that strips Claude Code's dynamic system-prompt
-    sections (cwd, env info, memory, git status, CLAUDE.md auto-discovery).
-    Without this flag the host shell's accumulated context can push the
-    request past the OAuth per-call ceiling and surface as "Prompt is too
-    long". OAuth + Max-20x sub remain in effect.
+    """Subprocess wrapper for session-C batch jobs.
+
+    Two adaptations on top of the shared :class:`ClaudeCli`:
+
+    1. Append ``--exclude-dynamic-system-prompt-sections`` so the host
+       shell's accumulated context (memory, CLAUDE.md, cwd, env, git
+       status) does not push the OAuth per-call request past its
+       ceiling and surface as "Prompt is too long". OAuth + Max-20x sub
+       remain in effect (this flag is NOT ``--bare``).
+    2. Tolerate ``returncode=1`` when stdout still contains valid JSON.
+       Claude Code's SessionEnd hook intermittently fails inside a
+       background subprocess ("SessionEnd hook ... failed: Hook
+       cancelled") and forces the CLI to exit non-zero AFTER the model
+       reply has already been emitted. The classification itself is
+       fine; we should not throw away a 30-row batch just because a
+       teardown hook misbehaved.
     """
 
     def _argv(self) -> list[str]:
-        return super()._argv() + ["--exclude-dynamic-system-prompt-sections"]
+        return super()._argv() + [
+            "--exclude-dynamic-system-prompt-sections",
+            "--setting-sources", "",
+            "--no-session-persistence",
+        ]
+
+    def query_json(self, prompt: str, timeout: int = 120) -> object:
+        import subprocess
+        import time as _time
+        if self._last_call_at is not None and self._sleep > 0:
+            elapsed = _time.monotonic() - self._last_call_at
+            if elapsed < self._sleep:
+                _time.sleep(self._sleep - elapsed)
+        try:
+            proc = subprocess.run(
+                self._argv(),
+                input=prompt,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd="/tmp",
+            )
+        except FileNotFoundError as e:
+            raise ClaudeCliError("claude CLI not found on PATH") from e
+        except subprocess.TimeoutExpired as e:
+            raise Timeout(f"claude CLI timed out after {timeout}s") from e
+        finally:
+            self._last_call_at = _time.monotonic()
+
+        stderr_tail = (proc.stderr or "")[-500:]
+        stdout = proc.stdout or ""
+
+        if proc.returncode != 0:
+            if _looks_rate_limited(stderr_tail) or _looks_rate_limited(stdout):
+                raise RateLimited(f"rate-limited: {stderr_tail}")
+            if stdout.strip():
+                try:
+                    return _extract_json(stdout)
+                except ParseError:
+                    pass
+            raise ClaudeCliError(
+                f"claude CLI exited {proc.returncode}: {stderr_tail}"
+            )
+
+        if not stdout.strip():
+            raise ClaudeCliError("claude CLI returned empty stdout")
+        return _extract_json(stdout)
 
 load_env()
 log = logging.getLogger(__name__)
@@ -381,37 +440,47 @@ def main() -> int:
 
         write_ts = datetime.now(UTC).isoformat()
         if args.write:
+            batch_written = 0
             with connect() as conn, conn.cursor() as cur:
-                batch_written = 0
                 for job_id, _title, _reqs, _desc in batch_rows:
                     cat = mapping.get(job_id)
                     if not cat:
                         continue
+                    try:
+                        cur.execute(
+                            """
+                            update jobs
+                               set role_category = %s,
+                                   classified_at = now(),
+                                   classified_source = %s
+                             where id = %s and role_category = 'other';
+                            """,
+                            (cat, CLASSIFIER_NAME, job_id),
+                        )
+                        if cur.rowcount == 0:
+                            conn.commit()
+                            skipped_race += 1
+                            continue
+                        conn.commit()
+                        batch_written += 1
+                    except Exception as e:
+                        conn.rollback()
+                        log.warning("update %s failed: %s — skip", job_id, e)
+                        skipped_race += 1
+                try:
                     cur.execute(
                         """
-                        update jobs
-                           set role_category = %s,
-                               classified_at = now(),
-                               classified_source = %s
-                         where id = %s and role_category = 'other';
+                        update classify_runs
+                           set jobs_written = jobs_written + %s,
+                               last_updated_at = now()
+                         where run_id = %s;
                         """,
-                        (cat, CLASSIFIER_NAME, job_id),
+                        (batch_written, run_id),
                     )
-                    if cur.rowcount == 0:
-                        skipped_race += 1
-                        continue
-                    batch_written += 1
-                cur.execute(
-                    """
-                    update classify_runs
-                       set jobs_written = jobs_written + %s,
-                           last_updated_at = now()
-                     where run_id = %s;
-                    """,
-                    (batch_written, run_id),
-                )
-                conn.commit()
-                written_this_run += batch_written
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+            written_this_run += batch_written
         for job_id, title, _reqs, _desc in batch_rows:
             cat = mapping.get(job_id, "")
             audit_rows.append({
