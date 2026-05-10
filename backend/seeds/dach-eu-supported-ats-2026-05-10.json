@@ -1,0 +1,156 @@
+[
+  {
+    "name": "Wolt",
+    "domain": "wolt.com",
+    "careers_url": "https://boards.greenhouse.io/wolt",
+    "geography": "Europe",
+    "stage_focus": "growth",
+    "sector_tags": ["delivery", "marketplace"],
+    "tier": 2,
+    "sources": ["session-d-gap2"],
+    "notes": "Helsinki-HQ delivery; gh-board verified 269 jobs (audit 2026-05-10)"
+  },
+  {
+    "name": "emnify",
+    "domain": "emnify.com",
+    "careers_url": "https://boards.greenhouse.io/emnify",
+    "geography": "Berlin, DE",
+    "stage_focus": "growth",
+    "sector_tags": ["iot", "connectivity"],
+    "tier": 2,
+    "sources": ["session-d-gap2"],
+    "notes": "DACH IoT-SIM SaaS; gh-board verified 15 jobs"
+  },
+  {
+    "name": "Nelly",
+    "domain": "nelly.com",
+    "careers_url": "https://jobs.ashbyhq.com/nelly",
+    "geography": "Berlin, DE",
+    "stage_focus": "series-a",
+    "sector_tags": ["fintech", "healthtech"],
+    "tier": 2,
+    "sources": ["session-d-gap2"],
+    "notes": "DACH healthcare-finance; ashby verified 19 jobs"
+  },
+  {
+    "name": "Adyen",
+    "domain": "adyen.com",
+    "careers_url": "https://boards.greenhouse.io/adyen",
+    "geography": "Amsterdam, NL",
+    "stage_focus": "growth",
+    "sector_tags": ["fintech", "payments"],
+    "tier": 1,
+    "sources": ["session-d-gap2"],
+    "notes": "Public-co payment processor; gh-board verified 247 jobs"
+  },
+  {
+    "name": "Airbnb",
+    "domain": "airbnb.com",
+    "careers_url": "https://boards.greenhouse.io/airbnb",
+    "geography": "Global",
+    "stage_focus": "growth",
+    "sector_tags": ["marketplace", "travel"],
+    "tier": 1,
+    "sources": ["session-d-gap2"],
+    "notes": "gh-board verified 234 jobs"
+  },
+  {
+    "name": "GitLab",
+    "domain": "gitlab.com",
+    "careers_url": "https://boards.greenhouse.io/gitlab",
+    "geography": "Remote-first",
+    "stage_focus": "growth",
+    "sector_tags": ["devtools", "infrastructure"],
+    "tier": 1,
+    "sources": ["session-d-gap2"],
+    "notes": "gh-board verified 187 jobs"
+  },
+  {
+    "name": "Pleo",
+    "domain": "pleo.io",
+    "careers_url": "https://boards.greenhouse.io/pleo",
+    "geography": "Copenhagen, DK",
+    "stage_focus": "growth",
+    "sector_tags": ["fintech", "expense-mgmt"],
+    "tier": 2,
+    "sources": ["session-d-gap2"],
+    "notes": "Nordic fintech; gh-board exists (0 jobs at probe)"
+  },
+  {
+    "name": "Choco",
+    "domain": "choco.com",
+    "careers_url": "https://jobs.ashbyhq.com/choco",
+    "geography": "Berlin, DE",
+    "stage_focus": "growth",
+    "sector_tags": ["foodtech", "supply-chain"],
+    "tier": 2,
+    "sources": ["session-d-gap2"],
+    "notes": "DACH food supply-chain; ashby verified 1 job"
+  },
+  {
+    "name": "Billie",
+    "domain": "billie.io",
+    "careers_url": "https://jobs.ashbyhq.com/billie",
+    "geography": "Berlin, DE",
+    "stage_focus": "growth",
+    "sector_tags": ["fintech", "bnpl"],
+    "tier": 2,
+    "sources": ["session-d-gap2"],
+    "notes": "DACH B2B BNPL; ashby verified 3 jobs"
+  },
+  {
+    "name": "Deliveroo",
+    "domain": "deliveroo.com",
+    "careers_url": "https://jobs.ashbyhq.com/deliveroo",
+    "geography": "London, UK",
+    "stage_focus": "growth",
+    "sector_tags": ["delivery", "marketplace"],
+    "tier": 1,
+    "sources": ["session-d-gap2"],
+    "notes": "Public-co delivery; ashby verified 222 jobs"
+  },
+  {
+    "name": "Bolt",
+    "domain": "bolt.eu",
+    "careers_url": "https://jobs.ashbyhq.com/bolt",
+    "geography": "Tallinn, EE",
+    "stage_focus": "growth",
+    "sector_tags": ["mobility", "delivery"],
+    "tier": 2,
+    "sources": ["session-d-gap2"],
+    "notes": "EU mobility super-app; ashby exists (0 jobs at probe)"
+  },
+  {
+    "name": "Contentful",
+    "domain": "contentful.com",
+    "careers_url": "https://boards.greenhouse.io/contentful",
+    "geography": "Berlin, DE",
+    "stage_focus": "growth",
+    "sector_tags": ["devtools", "cms"],
+    "tier": 2,
+    "sources": ["session-d-gap2"],
+    "notes": "DACH headless CMS; gh-board verified 113 jobs"
+  },
+  {
+    "name": "Contentstack",
+    "domain": "contentstack.com",
+    "careers_url": "https://boards.greenhouse.io/contentstack",
+    "geography": "San Francisco, US",
+    "stage_focus": "growth",
+    "sector_tags": ["devtools", "cms"],
+    "tier": 2,
+    "sources": ["session-d-gap2"],
+    "notes": "gh-board verified 6 jobs"
+  },
+  {
+    "name": "Sanity",
+    "domain": "sanity.io",
+    "careers_url": "https://jobs.ashbyhq.com/sanity",
+    "geography": "Oslo, NO",
+    "stage_focus": "series-b",
+    "sector_tags": ["devtools", "cms"],
+    "tier": 2,
+    "sources": ["session-d-gap2"],
+    "notes": "Nordic headless CMS; ashby verified 35 jobs"
+  }
+]
