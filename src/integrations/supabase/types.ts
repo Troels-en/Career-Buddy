@@ -240,6 +240,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_context_notes: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json
+          note_text: string
+          source: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          note_text: string
+          source?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          note_text?: string
+          source?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_profile: {
         Row: {
           created_at: string
