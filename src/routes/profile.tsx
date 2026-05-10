@@ -14,7 +14,9 @@ import { CvUploadInline } from "@/components/profile/CvUploadInline";
 import { EmailAccounts } from "@/components/profile/EmailAccounts";
 import { ThemePicker } from "@/components/profile/ThemePicker";
 import { usePhoto } from "@/lib/cinema-theme";
+import { loadCareerBuddyState, type SkillEntry } from "@/lib/cv-storage";
 import {
+  initProfileFromSupabase,
   loadSelectedTracks,
   loadYearsBucket,
   setSelectedTracks as persistSelectedTracks,
@@ -51,14 +53,29 @@ const EXPERIENCE_BUCKETS = [
   { id: "gt10",  label: "More than 10 years" },
 ];
 
+function readSkillsFromState(): SkillEntry[] {
+  const raw = loadCareerBuddyState().profile?.skills;
+  return Array.isArray(raw) ? raw : [];
+}
+
 function ProfilePage() {
   const heroImage = usePhoto("profile");
   const [yearsBucket, setYearsBucketState] = useState<YearsBucketId | null>(null);
   const [selectedTracks, setSelectedTracksState] = useState<string[]>([]);
+  const [skills, setSkills] = useState<SkillEntry[]>([]);
 
   useEffect(() => {
     setSelectedTracksState(loadSelectedTracks());
     setYearsBucketState(loadYearsBucket());
+    setSkills(readSkillsFromState());
+    // Best-effort cross-device sync: if Supabase has a newer profile,
+    // merge it into local state, then re-read so Section 03 reflects
+    // any remote skills the user uploaded on another device.
+    void initProfileFromSupabase().then(() => {
+      setSkills(readSkillsFromState());
+      setSelectedTracksState(loadSelectedTracks());
+      setYearsBucketState(loadYearsBucket());
+    });
   }, []);
 
   function toggleTrack(id: string) {
@@ -72,6 +89,11 @@ function ProfilePage() {
   function setYears(id: string) {
     setYearsBucketState(id as YearsBucketId);
     persistYearsBucket(id as YearsBucketId);
+  }
+
+  function refreshAfterCv() {
+    setSkills(readSkillsFromState());
+    setSelectedTracksState(loadSelectedTracks());
   }
 
   return (
@@ -231,22 +253,44 @@ function ProfilePage() {
           <RevealOnScroll delay={120} className="md:col-span-5">
             <GlassCard variant="cream" padding="lg">
               <div className="text-cinema-eyebrow text-cinema-ink-mute mb-4">
-                Coming with Phase 1
+                {skills.length > 0
+                  ? `Extracted from your CV · ${skills.length}`
+                  : "Skills board"}
               </div>
-              <ul className="space-y-2 text-base text-cinema-ink-soft">
-                <li className="flex items-start gap-2">
-                  <span className="mt-1.5 inline-block w-1.5 h-1.5 rounded-full bg-cinema-pine flex-shrink-0" />
-                  <span>Skills auto-extracted from your CV</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1.5 inline-block w-1.5 h-1.5 rounded-full bg-cinema-pine flex-shrink-0" />
-                  <span>Buddy-led skill-probe questions</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1.5 inline-block w-1.5 h-1.5 rounded-full bg-cinema-pine flex-shrink-0" />
-                  <span>Voice answers via Web Speech API</span>
-                </li>
-              </ul>
+              {skills.length === 0 ? (
+                <>
+                  <p className="text-cinema-body text-cinema-ink-soft mb-4">
+                    No skills yet. Drop your CV in section 04 and Buddy will
+                    extract a structured list — Python, fundraising, B2B
+                    sales — with an inferred level for each.
+                  </p>
+                  <a
+                    href="#cv-upload"
+                    className="inline-flex items-center gap-2 rounded-full bg-cinema-moss px-4 py-2 text-base text-cinema-cream font-medium"
+                  >
+                    Upload CV
+                  </a>
+                </>
+              ) : (
+                <ul className="flex flex-wrap gap-2">
+                  {skills.map((s, i) => (
+                    <li
+                      key={`${s.name}-${i}`}
+                      className="inline-flex items-center gap-2 rounded-full border border-cinema-mint bg-white px-3 py-1.5 text-base text-cinema-ink"
+                    >
+                      <span className="font-medium">{s.name}</span>
+                      {s.level && (
+                        <span className="text-cinema-ink-mute text-cinema-caption uppercase tracking-wider">
+                          {s.level}
+                        </span>
+                      )}
+                      {typeof s.years === "number" && s.years > 0 && (
+                        <span className="text-cinema-ink-mute">· {s.years}y</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
               <button
                 disabled
                 className="mt-6 inline-flex items-center gap-2 rounded-full border border-cinema-mint px-4 py-2 text-base text-cinema-ink-mute cursor-not-allowed opacity-70"
@@ -279,7 +323,7 @@ function ProfilePage() {
                   un-sanitised.
                 </p>
               </div>
-              <CvUploadInline />
+              <CvUploadInline onAnalysed={refreshAfterCv} />
             </GlassPanel>
           </RevealOnScroll>
         </div>

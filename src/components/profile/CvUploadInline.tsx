@@ -2,24 +2,27 @@ import { useRef, useState } from "react";
 import { Loader2, Upload } from "lucide-react";
 
 import { extractCvText } from "@/lib/cv-parser";
-import {
-  loadCareerBuddyState,
-  mergeAnalysisIntoState,
-  saveCareerBuddyState,
-  type CvAnalysisResponse,
-} from "@/lib/cv-storage";
+import { type CvAnalysisResponse } from "@/lib/cv-storage";
+import { setProfileFromAnalysis } from "@/lib/profile-store";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Inline CV upload card. Phase 0.5 — replaces the previous "Upload on
  * Overview" deep link that bounced the user back and forth. Uses the
  * same `extractCvText` parser + `analyze-cv` edge function as the
- * Overview's existing CV section, and writes the resulting profile
- * fields into the SAME localStorage key (`career-buddy-state`) that
- * `CareerBuddy.tsx` reads. The next time the user visits Overview
- * the analysed profile is already loaded.
+ * Overview's existing CV section, and persists via
+ * `setProfileFromAnalysis` (lib/profile-store) which writes
+ * `career-buddy-state` AND best-effort upserts the same shape into
+ * the Supabase `user_profile` table (migration 0012). Local stays
+ * canonical so the upload still works offline.
+ *
+ * `onAnalysed` fires after a successful analysis so the parent
+ * (Profile route) can refresh derived state (Section 03 Skills) from
+ * the freshly-written localStorage without a page reload.
  */
-export function CvUploadInline() {
+type Props = { onAnalysed?: () => void };
+
+export function CvUploadInline({ onAnalysed }: Props = {}) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [filename, setFilename] = useState<string | null>(null);
   const [text, setText] = useState("");
@@ -69,14 +72,10 @@ export function CvUploadInline() {
       if (!payload.analysis) {
         throw new Error(payload.error ?? "analyze-cv returned no analysis");
       }
-      const merged = mergeAnalysisIntoState(
-        loadCareerBuddyState(),
-        payload.analysis,
-        filename ?? "cv.txt",
-      );
-      saveCareerBuddyState(merged);
+      await setProfileFromAnalysis(payload.analysis, filename ?? "cv.txt");
       setSummary(payload.analysis.summary ?? "Analysis complete. Open Overview to review.");
       setPhase("done");
+      onAnalysed?.();
     } catch (e) {
       setPhase("idle");
       setError(e instanceof Error ? e.message : "analyse-cv failed");
