@@ -1337,19 +1337,13 @@ export default function CareerBuddy() {
 
   return (
     <div className="min-h-screen bg-white text-[#111827]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="font-semibold text-lg" style={{ color: "#7c3aed" }}>Career-Buddy</div>
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-gray-400">{jobs.length} live roles · powered by Gemini</span>
-            <button onClick={resetDemo} className="text-xs text-gray-400 underline" title="Wipe local profile + applications">Reset</button>
-          </div>
-        </div>
-      </header>
-
       <main className="max-w-6xl mx-auto px-6">
-        <section className="py-8">
+        <section id="profile" className="py-8 scroll-mt-16">
           <h1 className="text-3xl font-semibold tracking-tight mb-2">Land your first startup role.</h1>
+          <p className="text-base text-gray-500 mb-3">
+            {jobs.length} live roles · powered by Gemini ·{" "}
+            <button onClick={resetDemo} className="underline hover:text-gray-700">Reset local data</button>
+          </p>
           <p className="text-base text-gray-500 mb-6">
             Track applications, learn what works, find roles that fit. For business-background grads chasing Founders-Associate, BizOps, Strategy, BD.
           </p>
@@ -1383,7 +1377,7 @@ export default function CareerBuddy() {
           </div>
 
           {(state.profile.built || chatReply) && (
-            <div className="bg-white border rounded-xl shadow-sm p-5">
+            <div id="cv-upload" className="bg-white border rounded-xl shadow-sm p-5 scroll-mt-16">
               <label className="text-sm font-medium block mb-2">Upload or paste your CV</label>
               <div className="flex items-center gap-3 mb-3">
                 <label className="inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-lg cursor-pointer hover:bg-gray-50">
@@ -1434,7 +1428,7 @@ export default function CareerBuddy() {
           )}
         </section>
 
-        <section className="py-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <section id="tracker" className="py-8 grid grid-cols-1 md:grid-cols-3 gap-6 scroll-mt-16">
           <div className="md:col-span-2">
             <ApplicationsTracker
               applications={state.applications}
@@ -1457,7 +1451,7 @@ export default function CareerBuddy() {
           </div>
         </section>
 
-        <section className="py-8">
+        <section id="roles" className="py-8 scroll-mt-16">
           <h2 className="text-2xl font-semibold mb-1">Roles you might fit</h2>
           <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
             <p className="text-sm text-gray-500">

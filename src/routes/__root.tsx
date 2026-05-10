@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import { Nav } from "@/components/Nav";
 
 function NotFoundComponent() {
   return (
@@ -125,6 +126,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <Nav />
       <Outlet />
     </QueryClientProvider>
   );
