@@ -28,6 +28,19 @@ import {
   type FilterPreset,
 } from "@/lib/filter-presets";
 import {
+  MATCH_CACHE_KEY,
+  MATCH_DAILY_LIMIT,
+  MATCH_QUOTA_COOLDOWN_MS,
+  MATCH_QUOTA_KEY,
+  loadMatchCache,
+  persistMatchCache,
+  readQuotaState,
+  writeQuotaState,
+  type MatchCache,
+  type MatchEntry,
+  type MatchResult,
+} from "@/lib/match-cache";
+import {
   DEFAULT_FILTERS,
   applyFilters,
   countActiveFilters,
@@ -125,22 +138,8 @@ type State = {
 // (imported below). JobLevel type stays inline because it's referenced
 // by the rich VcJob type that has a dozen other fields.
 
-type MatchResult = {
-  score: number;
-  verdict: "strong" | "moderate" | "weak";
-  matched_skills: string[];
-  missing_skills: string[];
-  experience_match: string;
-  reasons: string[];
-  blockers?: string[];
-  suggestion: string;
-};
-
-type MatchEntry =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "error"; error: string; retryAfterMs?: number }
-  | { status: "ready"; result: MatchResult; profile_signature: string; computed_at: number };
+// MatchResult / MatchEntry / MatchCache moved to src/lib/match-cache.ts
+// (imported above).
 
 type DraftKind = "cover_letter" | "outreach" | "feedback_request" | "thank_you" | "follow_up";
 
@@ -299,48 +298,10 @@ function loadState(): State {
 // profileSignature moved to src/lib/jobs-helpers.ts (imported above).
 // applyFilters moved to src/lib/job-filters.ts (imported above).
 
-const MATCH_CACHE_KEY = "career-buddy-matches-v1";
-const MATCH_QUOTA_KEY = "career-buddy-match-quota-v1";
-const MATCH_QUOTA_COOLDOWN_MS = 4 * 3600 * 1000;
-const MATCH_DAILY_LIMIT = 10;
-
-type MatchCache = Record<string, { result: MatchResult; profile_signature: string; computed_at: number }>;
-
-function loadMatchCache(): MatchCache {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(MATCH_CACHE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as MatchCache;
-  } catch {
-    return {};
-  }
-}
-
-function persistMatchCache(cache: MatchCache) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(MATCH_CACHE_KEY, JSON.stringify(cache));
-  } catch {}
-}
-
-function readQuotaState(): { quotaHitAt: number | null; runs: { date: string; count: number } } {
-  if (typeof window === "undefined") return { quotaHitAt: null, runs: { date: "", count: 0 } };
-  try {
-    const raw = localStorage.getItem(MATCH_QUOTA_KEY);
-    if (!raw) return { quotaHitAt: null, runs: { date: "", count: 0 } };
-    return JSON.parse(raw);
-  } catch {
-    return { quotaHitAt: null, runs: { date: "", count: 0 } };
-  }
-}
-
-function writeQuotaState(state: { quotaHitAt: number | null; runs: { date: string; count: number } }) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(MATCH_QUOTA_KEY, JSON.stringify(state));
-  } catch {}
-}
+// MATCH_CACHE_KEY / MATCH_QUOTA_KEY / MATCH_QUOTA_COOLDOWN_MS /
+// MATCH_DAILY_LIMIT / loadMatchCache / persistMatchCache /
+// readQuotaState / writeQuotaState moved to src/lib/match-cache.ts
+// (imported above).
 
 // fitWhy moved to src/lib/job-fit.ts (imported below).
 
