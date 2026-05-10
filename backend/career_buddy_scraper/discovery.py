@@ -16,7 +16,8 @@ from .http import RateLimitedClient
 # most common embed; Lever second; Ashby and Workable last).
 ATS_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("greenhouse", re.compile(r"boards\.greenhouse\.io/(?P<slug>[a-z0-9-]+)", re.I)),
-    ("greenhouse", re.compile(r"(?P<slug>[a-z0-9-]+)\.greenhouse\.io", re.I)),
+    ("greenhouse", re.compile(r"boards-api\.greenhouse\.io/v\d+/boards/(?P<slug>[a-z0-9-]+)", re.I)),
+    ("greenhouse", re.compile(r"(?<![\w-])(?!boards-api|boards|api|app|www|jobs|talent|careers)(?P<slug>[a-z0-9-]+)\.greenhouse\.io", re.I)),
     ("lever", re.compile(r"jobs\.lever\.co/(?P<slug>[a-z0-9-]+)", re.I)),
     ("ashby", re.compile(r"jobs\.ashbyhq\.com/(?P<slug>[a-z0-9-]+)", re.I)),
     ("workable", re.compile(r"apply\.workable\.com/(?P<slug>[a-z0-9-]+)", re.I)),

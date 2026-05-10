@@ -19,7 +19,8 @@ from ..models import AtsSource
 GREENHOUSE_API = "https://boards-api.greenhouse.io/v1/boards/{slug}/jobs?content=true"
 SLUG_PATTERNS = [
     re.compile(r"boards\.greenhouse\.io/(?P<slug>[a-z0-9-]+)", re.I),
-    re.compile(r"(?P<slug>[a-z0-9-]+)\.greenhouse\.io", re.I),
+    re.compile(r"boards-api\.greenhouse\.io/v\d+/boards/(?P<slug>[a-z0-9-]+)", re.I),
+    re.compile(r"(?<![\w-])(?!boards-api|boards|api|app|www|jobs|talent|careers)(?P<slug>[a-z0-9-]+)\.greenhouse\.io", re.I),
 ]
 
 
