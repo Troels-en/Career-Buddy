@@ -3,6 +3,33 @@
 > Session 4, 2026-05-10 night. Sonnet 4.6 (operator note: Opus 4.7
 > was active in part, switched mid-flight — see commit author).
 
+## Final lift (post two scrape passes)
+
+| Metric | Baseline (start) | After session D | Delta |
+|---|---:|---:|---:|
+| Active jobs | 9,980 | **12,504** | **+2,524** |
+| Producing companies | 104 | **126** | **+22** |
+| `vcs` rows | 209 | 235 | +26 (14 + 9 + 3) |
+| `skip_probe=true` | 2 | 60 | +58 (dead-URL noise muted) |
+| Backend pytest | 258 | 263 | +5 |
+
+Three real bugs found + fixed in production adapters:
+
+1. **workable/v3 body** — `{"limit": N}` rejected by API → all
+   workable scrapes silently zeroed. Fixed: send `{}`.
+2. **workable/normalize URL** — v3 jobs payload omits absolute
+   URL → `url=""` → CanonicalJob validation fail → 7 huggingface
+   jobs quarantined invisibly. Fixed: stash slug at fetch, build
+   `apply.workable.com/<slug>/j/<shortcode>/`.
+3. **personio/normalize URL** — same shape (XML feed has no
+   per-job link). Fixed: stash slug + tld at fetch, build
+   `<slug>.jobs.personio.<tld>/job/<id>`.
+
+Run-stats artifact for the final pass:
+`artifacts/run-stats-20260510-204635.json` — 804s, 172 vcs, 131
+matched, 12,478 valid, **0 invalid**, 1,167 inserted, 11,311
+updated.
+
 ## What shipped (gap by gap)
 
 ### Gap 1 — Broken-VC-adapter audit ✅ partial
