@@ -153,15 +153,17 @@ proceeds with 7–9 immediately on top.
 - [x] **CV-profile new ask tasks 1–6** (round 8 — schema 0012 live,
       analyze-cv extended, types augmented, lib + dual-write +
       mocked-Supabase tests shipped — A unblocked for 7-9)
-- [ ] Pre-existing CareerBuddy.tsx Supabase upsert TS error fix
-      (surgical narrow of `applicationToRow` return type — was
-      :1170, now :501 after lifts; out-of-scope unless explicitly
-      asked, user listed it in remaining → safe to fix this round)
+- [x] Pre-existing CareerBuddy.tsx Supabase upsert TS error fix
+      — round 8, commit `feda357` narrowed `applicationToRow` return
+      to `Database["public"]["Tables"]["applications"]["Insert"]`.
+      `bunx tsc --noEmit` now fully clean.
 - [ ] `tests/e2e/lazy-chunks.spec.ts` — Playwright bundle
       byte-budget assertion vs `docs/iter-3-bundle-baseline.txt`
-      (Iter-3 Phase 4 prep; gates monolith deletion)
-- [ ] `scripts/smoke-routes.sh` — hard-reload curl smoke for
-      Cloudflare Workers SPA fallback (4 routes return 200)
+      (Iter-3 Phase 4 prep; gates monolith deletion). **Deferred** —
+      avoiding new playwright/webServer wiring while round-8 cross-
+      session activity is settling.
+- [x] `scripts/smoke-routes.sh` — round 8, commit `a8cd7f5`. 5 routes
+      return 200 against the live Worker.
 - [ ] Phase 1.6 backend OAuth for `user_email_accounts` (Gmail /
       Outlook handshake + KMS / pgcrypto wrap of
       `oauth_refresh_token`). Open question: Gmail-only first or
@@ -198,6 +200,16 @@ proceeds with 7–9 immediately on top.
   `6982329` (now in `src/lib/types.ts` + `src/lib/state.ts`).
 
 ## Last sync
+
+- 2026-05-10 late evening (round 8 wrap) — B also shipped lower-
+  priority tasks 7 + 9 (TS fix `feda357`, smoke-routes `a8cd7f5`).
+  Lazy-chunks Playwright spec deferred. **Note for A:** commit
+  `a8cd7f5` accidentally bundled an unrelated `src/lib/cinema-theme.ts`
+  edit (coral overview/profile URL fix) that was already staged in
+  the working tree when B committed scripts/smoke-routes.sh. The
+  cinema-theme change looks intentional + correct (replaces a 404'd
+  Unsplash URL) but the subject line on `a8cd7f5` doesn't reference
+  it. Flagged for transparency; no revert.
 
 - 2026-05-10 late evening (round 8) — B shipped tasks 1–6 of the
   CV-profile-Supabase ask. **A unblocked for tasks 7–9.** Commits:
