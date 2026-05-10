@@ -85,6 +85,33 @@ const RESPONSE_SCHEMA = {
         required: ["institution", "degree"],
       },
     },
+    skills: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "Concrete skill — tool, language, framework, or named methodology. Avoid vague soft-skills.",
+          },
+          level: {
+            type: "string",
+            enum: ["beginner", "intermediate", "advanced", "expert"],
+            description: "Inferred proficiency from the work-history evidence.",
+          },
+          years: {
+            type: "number",
+            description: "Years of hands-on experience inferred from the CV.",
+          },
+          evidence: {
+            type: "string",
+            description: "Short phrase from the CV that justifies the level/years.",
+          },
+        },
+        required: ["name"],
+      },
+      description: "Concrete skills extracted from the CV with inferred level + years from work history.",
+    },
   },
   required: [
     "summary",
@@ -95,6 +122,7 @@ const RESPONSE_SCHEMA = {
     "target_role_categories",
     "location_preferences",
     "work_history",
+    "skills",
   ],
 };
 
@@ -106,7 +134,8 @@ Rules:
 - Match the language of the CV (German or English) for free-text fields.
 - Be specific. Replace vague claims like "team player" with the concrete behavior on the CV.
 - Output ONLY the JSON object matching the schema. No markdown fences, no prose.
-- Preserve the candidate's exact phrasing in work-history bullets where useful.`;
+- Preserve the candidate's exact phrasing in work-history bullets where useful.
+- Extract concrete skills first-class (tools, languages, frameworks, named methodologies). For each, infer a proficiency level ("beginner" | "intermediate" | "advanced" | "expert") and years of hands-on experience from the work history. Skip vague soft-skills like "team player" or "communication"; include them only if the CV evidences a specific named framework. Use 0 for years when the CV mentions a skill without timing context. Provide a short evidence phrase from the CV when possible.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -178,6 +207,8 @@ serve(async (req) => {
       return jsonResponse({ error: "Gemini returned invalid JSON" }, 502);
     }
 
+    sanitizeSkills(analysis);
+
     return jsonResponse({ analysis });
   } catch (e) {
     console.error("analyze-cv error:", e);
@@ -193,4 +224,37 @@ function jsonResponse(payload: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+const VALID_SKILL_LEVELS = new Set(["beginner", "intermediate", "advanced", "expert"]);
+
+// Drop skill entries missing a usable name; clamp years to [0, 50];
+// drop unknown level enum values. Mutates analysis.skills in place.
+function sanitizeSkills(analysis: unknown): void {
+  if (!analysis || typeof analysis !== "object") return;
+  const obj = analysis as Record<string, unknown>;
+  const raw = obj.skills;
+  if (!Array.isArray(raw)) {
+    obj.skills = [];
+    return;
+  }
+  const cleaned: Array<Record<string, unknown>> = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const e = entry as Record<string, unknown>;
+    const name = typeof e.name === "string" ? e.name.trim() : "";
+    if (!name) continue;
+    const out: Record<string, unknown> = { name };
+    if (typeof e.level === "string" && VALID_SKILL_LEVELS.has(e.level)) {
+      out.level = e.level;
+    }
+    if (typeof e.years === "number" && Number.isFinite(e.years)) {
+      out.years = Math.max(0, Math.min(50, e.years));
+    }
+    if (typeof e.evidence === "string" && e.evidence.trim()) {
+      out.evidence = e.evidence.trim();
+    }
+    cleaned.push(out);
+  }
+  obj.skills = cleaned;
 }
