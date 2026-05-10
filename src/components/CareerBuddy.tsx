@@ -23,6 +23,11 @@ import {
   safeIsoDate,
 } from "@/lib/jobs-helpers";
 import {
+  loadPresets,
+  persistPresets,
+  type FilterPreset,
+} from "@/lib/filter-presets";
+import {
   DEFAULT_FILTERS,
   applyFilters,
   countActiveFilters,
@@ -284,29 +289,8 @@ function loadState(): State {
 
 // fitScore moved to src/lib/job-fit.ts (imported below).
 
-const FILTER_PRESETS_KEY = "career-buddy-filter-presets-v1";
-
-type FilterPreset = { name: string; filters: Filters };
-
-function loadPresets(): FilterPreset[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(FILTER_PRESETS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((p) => p && typeof p.name === "string" && p.filters) as FilterPreset[];
-  } catch {
-    return [];
-  }
-}
-
-function persistPresets(presets: FilterPreset[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(FILTER_PRESETS_KEY, JSON.stringify(presets));
-  } catch {}
-}
+// FILTER_PRESETS_KEY / FilterPreset / loadPresets / persistPresets
+// moved to src/lib/filter-presets.ts (imported above).
 
 // serializeFilters / parseFiltersFromHash / sortJobs / countActiveFilters
 // moved to src/lib/job-filters.ts (imported above).
