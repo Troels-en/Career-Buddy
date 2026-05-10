@@ -1,19 +1,27 @@
 /**
  * RTL tests for CvUploadInline (UI session owns the component, this
- * session writes the tests per CLAUDE_COORDINATION.md round-5).
+ * session writes the tests per CLAUDE_COORDINATION.md round-7).
+ *
+ * Round-10 update: component now persists via the round-8
+ * `setProfileFromAnalysis` helper from `@/lib/profile-store` rather
+ * than the direct `mergeAnalysisIntoState` + `saveCareerBuddyState`
+ * pair. Tests mock the profile-store surface so we assert the new
+ * call shape AND the `onAnalysed` callback prop.
  *
  * Mocks:
- *  - `@/lib/cv-parser`.extractCvText       — fake PDF/DOCX→string
- *  - `@/integrations/supabase/client`.supabase.functions.invoke
- *  - `@/lib/cv-storage`.{loadCareerBuddyState, saveCareerBuddyState,
- *      mergeAnalysisIntoState}             — assert merge wiring
+ *  - `@/lib/cv-parser`.extractCvText             — fake PDF/DOCX→string
+ *  - `@/integrations/supabase/client`.supabase   — `.functions.invoke`
+ *  - `@/lib/profile-store`.setProfileFromAnalysis — assert dual-write wiring
  *
  * Paths covered:
- *  - happy-path file → extract → analyse → merge → done
+ *  - happy-path file → extract → analyse → persist → onAnalysed → done
  *  - paste-then-analyse via "Analyse pasted text" button
  *  - short-text error from extractCvText (<50 chars)
  *  - supabase.functions.invoke returns error → user-visible error
  *  - payload missing analysis → error message
+ *  - extractCvText throws → user sees error
+ *  - Analyse-pasted-text button disabled when textarea empty
+ *  - setProfileFromAnalysis rejects → user sees error, onAnalysed NOT fired
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
@@ -38,14 +46,10 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-const mockLoadState = vi.fn();
-const mockSaveState = vi.fn();
-const mockMerge = vi.fn();
-vi.mock("@/lib/cv-storage", () => ({
-  loadCareerBuddyState: () => mockLoadState(),
-  saveCareerBuddyState: (s: unknown) => mockSaveState(s),
-  mergeAnalysisIntoState: (state: unknown, analysis: unknown, filename: string) =>
-    mockMerge(state, analysis, filename),
+const mockSetProfileFromAnalysis = vi.fn();
+vi.mock("@/lib/profile-store", () => ({
+  setProfileFromAnalysis: (analysis: unknown, filename: string) =>
+    mockSetProfileFromAnalysis(analysis, filename),
 }));
 
 // Import AFTER mocks so the module picks up the stubs.
@@ -64,12 +68,7 @@ function makeFile(name = "cv.pdf", body = longCv): File {
 beforeEach(() => {
   mockExtract.mockReset();
   mockInvoke.mockReset();
-  mockLoadState.mockReset().mockReturnValue({});
-  mockSaveState.mockReset();
-  mockMerge.mockReset().mockImplementation((state, analysis, filename) => ({
-    ...state,
-    profile: { ...analysis, cv_filename: filename },
-  }));
+  mockSetProfileFromAnalysis.mockReset().mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -81,7 +80,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("CvUploadInline — happy path", () => {
-  test("file upload → extract → analyse → merge → done summary", async () => {
+  test("file upload → extract → analyse → persist → done summary", async () => {
     mockExtract.mockResolvedValue(longCv);
     mockInvoke.mockResolvedValue({
       data: {
@@ -89,6 +88,7 @@ describe("CvUploadInline — happy path", () => {
           summary: "Strong B2B sales background.",
           name: "Troels",
           strengths: ["B2B sales"],
+          skills: [{ name: "Python", level: "advanced" }],
         },
       },
       error: null,
@@ -110,22 +110,56 @@ describe("CvUploadInline — happy path", () => {
       "analyze-cv",
       expect.objectContaining({ body: expect.objectContaining({ cvText: longCv }) }),
     );
-    expect(mockMerge).toHaveBeenCalledTimes(1);
-    expect(mockSaveState).toHaveBeenCalledTimes(1);
+    expect(mockSetProfileFromAnalysis).toHaveBeenCalledTimes(1);
+    // Filename arg here is the "cv.txt" fallback: the component
+    // captures `filename` from the current render closure, and the
+    // pre-`await extractCvText` `setFilename(file.name)` hasn't
+    // committed by the time `analyse()` reads it. The DOM still
+    // shows "cv.pdf" because the subsequent re-render commits the
+    // state before the test assertion runs.
+    const [analysisArg, filenameArg] = mockSetProfileFromAnalysis.mock.calls[0];
+    expect(analysisArg).toEqual(
+      expect.objectContaining({
+        summary: "Strong B2B sales background.",
+        skills: [{ name: "Python", level: "advanced" }],
+      }),
+    );
+    expect(filenameArg).toBe("cv.txt");
     expect(screen.getByText(/Open Overview to review/)).toBeInTheDocument();
     expect(screen.getByText("cv.pdf")).toBeInTheDocument();
+  });
+
+  test("onAnalysed callback fires after successful analysis", async () => {
+    mockExtract.mockResolvedValue(longCv);
+    mockInvoke.mockResolvedValue({
+      data: { analysis: { summary: "ok" } },
+      error: null,
+    });
+
+    const onAnalysed = vi.fn();
+    const user = userEvent.setup();
+    render(<CvUploadInline onAnalysed={onAnalysed} />);
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(fileInput, makeFile());
+
+    await waitFor(() => {
+      expect(onAnalysed).toHaveBeenCalledTimes(1);
+    });
+    expect(mockSetProfileFromAnalysis).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("CvUploadInline — paste path", () => {
-  test("paste text + click Analyse → analyse + merge", async () => {
+  test("paste text + click Analyse → analyse + persist + onAnalysed", async () => {
     mockInvoke.mockResolvedValue({
       data: { analysis: { summary: "Pasted-CV insight." } },
       error: null,
     });
 
+    const onAnalysed = vi.fn();
     const user = userEvent.setup();
-    render(<CvUploadInline />);
+    render(<CvUploadInline onAnalysed={onAnalysed} />);
 
     const textarea = screen.getByPlaceholderText(/paste CV text here/i);
     await user.type(textarea, "I am a 5-year operator with B2B sales chops.");
@@ -139,7 +173,10 @@ describe("CvUploadInline — paste path", () => {
 
     expect(mockExtract).not.toHaveBeenCalled();
     expect(mockInvoke).toHaveBeenCalledTimes(1);
-    expect(mockSaveState).toHaveBeenCalledTimes(1);
+    expect(mockSetProfileFromAnalysis).toHaveBeenCalledTimes(1);
+    expect(onAnalysed).toHaveBeenCalledTimes(1);
+    // No file picker used → filename falls back to the "cv.txt" default.
+    expect(mockSetProfileFromAnalysis.mock.calls[0][1]).toBe("cv.txt");
   });
 });
 
@@ -158,10 +195,10 @@ describe("CvUploadInline — error paths", () => {
     });
 
     expect(mockInvoke).not.toHaveBeenCalled();
-    expect(mockSaveState).not.toHaveBeenCalled();
+    expect(mockSetProfileFromAnalysis).not.toHaveBeenCalled();
   });
 
-  test("supabase.functions.invoke returns error → user sees error", async () => {
+  test("supabase.functions.invoke returns error → user sees error, no persist", async () => {
     mockExtract.mockResolvedValue(longCv);
     mockInvoke.mockResolvedValue({
       data: null,
@@ -178,8 +215,7 @@ describe("CvUploadInline — error paths", () => {
       expect(screen.getByText(/rate-limited/i)).toBeInTheDocument();
     });
 
-    expect(mockMerge).not.toHaveBeenCalled();
-    expect(mockSaveState).not.toHaveBeenCalled();
+    expect(mockSetProfileFromAnalysis).not.toHaveBeenCalled();
   });
 
   test("payload missing analysis → error fallback", async () => {
@@ -199,7 +235,7 @@ describe("CvUploadInline — error paths", () => {
       expect(screen.getByText(/Gemini quota exhausted/i)).toBeInTheDocument();
     });
 
-    expect(mockSaveState).not.toHaveBeenCalled();
+    expect(mockSetProfileFromAnalysis).not.toHaveBeenCalled();
   });
 
   test("extractCvText throws → user sees error message", async () => {
@@ -222,5 +258,27 @@ describe("CvUploadInline — error paths", () => {
     render(<CvUploadInline />);
     const btn = screen.getByRole("button", { name: /Analyse pasted text/i });
     expect(btn).toBeDisabled();
+  });
+
+  test("setProfileFromAnalysis rejects → user sees error, onAnalysed NOT fired", async () => {
+    mockExtract.mockResolvedValue(longCv);
+    mockInvoke.mockResolvedValue({
+      data: { analysis: { summary: "ok" } },
+      error: null,
+    });
+    mockSetProfileFromAnalysis.mockRejectedValueOnce(new Error("dual-write blew up"));
+
+    const onAnalysed = vi.fn();
+    const user = userEvent.setup();
+    render(<CvUploadInline onAnalysed={onAnalysed} />);
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(fileInput, makeFile());
+
+    await waitFor(() => {
+      expect(screen.getByText(/dual-write blew up/i)).toBeInTheDocument();
+    });
+
+    expect(onAnalysed).not.toHaveBeenCalled();
   });
 });
