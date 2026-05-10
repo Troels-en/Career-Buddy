@@ -45,46 +45,68 @@
 - [x] Phase 0.5 IA cleanup + Profile depth + /jobs route + cinema chrome
 - [x] CV upload service-worker cache fix (sw v3 + network-first for HTML)
 - [x] PromoBar /jobs link, /jobs fetch raised 500 → 10000
-- [ ] Email integration spec (Gmail OAuth + multi-account, planned for
-      Phase 1.5; needs Supabase `user_email_accounts` migration owned by B)
-- [ ] Supabase storage photo gallery for theme-pack photography (planned
-      for Phase 4 prep; needs `cinema_photos` bucket owned by B)
-- [ ] Onyx theme palette prototype on `/design-preview?theme=onyx` (Phase 4)
+- [x] Phase 4 step 1: theme-swap architecture + Onyx prototype
+      (`fafc7b4`)
+- [x] Phase 4 step 2: Slate + Coral palettes + per-theme photography
+      library + `usePhoto()` hook (`bbbcb8c`)
+- [x] Hero readability fix on light themes (`797d227`)
+- [ ] **Phase 4 step 3: theme picker UI on Profile** (drop the
+      `?theme=` URL-param requirement; add a chip-set in Profile that
+      writes to localStorage `career-buddy-theme-v1` + sets
+      `<html data-theme>`. Highest user-facing value left in Phase 4.)
+- [ ] Email integration UI Phase 1.5 (Gmail OAuth + multi-account
+      picker; B's `0010_user_email_accounts.sql` is live, so unblocked)
+- [ ] Wire `<html data-theme>` to `user.track_primary` after B ships a
+      `user_tracks` migration (different from `user_email_accounts`)
 
 ### Owned by B (backend + tooling session)
-- [ ] Phase 1 of iter-3 split: extract `tokenize`/`fitScore`/`applyFilters`
-      into `src/lib/*` + vitest tests targeting 80% coverage threshold
-- [ ] Move `TRACKS` array from `src/routes/profile.tsx` to
-      `src/lib/tracks.ts` so `/jobs` filter UI can reuse it (filter UI
-      ownership stays with A, but the data shape stays in B's lib)
-- [ ] Migration `0010_user_email_accounts.sql` (Phase 1.5 dep)
+- [x] Phase 1 lib extraction: `tracks`, `cv-storage`, `job-fit`,
+      `job-filters`, `profile-store` — all 5 modules + 112 vitest
+      tests (`4bf0c23` … `c0a2214`)
+- [x] Migration `0010_user_email_accounts.sql` shipped + applied
+      to Supabase (`e5c8d88`)
+- [ ] **lib shrink continued:** `formatSalary`, `relativeDays`,
+      `fitColor`, `cleanSnippet`, `profileCompleteness`,
+      `applicationToRow`, `safeIsoDate`, `profileSignature` —
+      B identified these as the next pure-helper extraction batch
+- [ ] **Vitest tests for `CvUploadInline.tsx` with RTL** — A owns the
+      component, B writes the tests (approved by A this round)
 - [ ] Migration `0011_jobs_search_index.sql` with
       `CREATE INDEX CONCURRENTLY` (Phase 3 dep — when A does
       server-side jobs pagination)
+- [ ] **NEW: migration for `user_tracks`** so A can wire
+      `<html data-theme>` to `user.track_primary` and finish Phase 4
 
 ### Open questions for the user (don't act until answered)
-- Onyx theme: ship as second after Sage, or different priority?
 - Email integration: Gmail-only first (covers 80%) or Gmail + Outlook day-1?
 - Photo gallery: licensed Unsplash+ tier, AI-generated, or curated public-domain?
 
 ## Known soft-skip items (intentional, not blockers)
 
-- Profile `years` + `tracks` write to their own localStorage keys
-  (`career-buddy-tracks-v1`, `career-buddy-years-bucket-v1`), NOT into
-  `career-buddy-state.profile`. The Profile UI says "Saved locally for
-  now — Phase 1 syncs to your account." B's lib extraction will add a
-  `lib/profile-store.ts` that B can wire into `career-buddy-state` as
-  part of the lift.
 - `/jobs` mounts `<CareerBuddy rolesOnly />` — placeholder until B's
   Phase 2 extraction ships `<RoleGrid />` standalone.
-- Pre-existing `tsc --strict` failure at `CareerBuddy.tsx:1170`
-  (Supabase `applications.upsert` type mismatch) — pre-dates both
+- Pre-existing `tsc --strict` failure at `CareerBuddy.tsx:839`
+  (Supabase `applications.upsert` type mismatch — line moved from
+  :1170 after lib extraction shrunk the file). Pre-dates both
   sessions, neither owns the fix today.
-- Hardcoded `TRACKS` in `src/routes/profile.tsx` — B will move to
-  `src/lib/tracks.ts` in Phase 1 of the extraction.
+
+## Resolved soft-skips (no longer applicable)
+
+- ~~Profile `years` + `tracks` write to their own localStorage keys
+  only~~ → resolved by B in `c0a2214`. `lib/profile-store.ts` now
+  dual-writes legacy keys + `career-buddy-state.profile`
+  (`target_role_categories`, `years_min`, `years_max`). Profile-side
+  selections now influence role-fit grading on Overview.
+- ~~Hardcoded `TRACKS` in `src/routes/profile.tsx`~~ → resolved by B
+  in `4bf0c23`, now in `src/lib/tracks.ts` with Track type +
+  experience-window helpers.
 
 ## Last sync
 
-- 2026-05-10 evening — A pushed Phase 0.5 (`c1f47ee`), B asked for
-  state. A acknowledges B's findings, delegates Phase 1 extraction to
-  B, ships PromoBar link + /jobs fetch bump + sw cache-fix on top.
+- 2026-05-10 evening (round 4) — B finished Phase 1 lib extraction
+  (5 modules + 112 tests + migration 0010). A finished Phase 4 step 1
+  (theme-swap arch + Onyx) + step 2 (Slate + Coral + per-theme
+  photography). B asks A: green-light to (1) keep shrinking lib with
+  formatSalary etc., (2) write RTL tests for CvUploadInline. A says
+  yes to both. A commits to Phase 4 step 3 (Profile theme picker UI)
+  next, then Email integration UI Phase 1.5.
