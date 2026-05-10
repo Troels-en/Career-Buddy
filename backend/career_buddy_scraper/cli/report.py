@@ -189,65 +189,88 @@ def main() -> int:
         )
     lines.append("")
 
+    specific_total = sum(
+        n for cat, n in counts.by_category.items() if cat != "tier2_pending"
+    )
+    pending_total = counts.by_category.get("tier2_pending", 0)
+    coverage_pct = (
+        (specific_total / counts.jobs_active * 100.0) if counts.jobs_active else 0.0
+    )
+    top_companies = ", ".join(f"{c} ({n})" for c, n in counts.by_company[:5])
+    ats_summary = ", ".join(
+        f"{src} {n}" for src, n in sorted(counts.by_source.items(), key=lambda kv: -kv[1])
+    )
+
     lines.append("## Findings\n")
     lines.append(
-        "1. **Most VCs do not run public ATS boards for their internal roles.** Of 15 "
-        "Tier-1 VCs seeded, only 7 had a discoverable ATS slug across Greenhouse, "
-        "Lever, Ashby, Workable. Of those 7, 4 returned ≥ 1 active role. The "
-        "remaining 8 (Project A, Speedinvest, HV-via-`hv`, Lakestar, Plural, "
-        "Balderton, Creandum, Point Nine, Founders Fund) hire via personal networks "
-        "or use ATSes outside our four-adapter coverage."
+        f"1. **Coverage at scale.** {counts.vcs_total} VCs in master list, "
+        f"{counts.jobs_active} active jobs across {ats_summary}. Top employers: "
+        f"{top_companies}. After three discover_slugs rounds + manual pins, the "
+        "VC + portfolio-company funnel is the real volume source — direct VC hires "
+        "remain a tiny minority of total rows."
     )
     lines.append(
-        "2. **Slug-name collision on Ashby `notion`.** The slug returns Notion Labs "
-        "(productivity SaaS, 141 jobs) — not Notion Capital VC. 141 rows were "
-        "deactivated and Notion Capital's `careers_url` reverted to `notion.vc/careers`. "
-        "Future scrapes will skip it. The contaminated rows remain in the DB with "
-        "`is_active = false` for audit."
+        f"2. **Tier-1 regex coverage = {specific_total}/{counts.jobs_active} "
+        f"({coverage_pct:.0f}%).** Specific buckets: "
+        + ", ".join(
+            f"{cat} {n}"
+            for cat, n in sorted(
+                ((c, n) for c, n in counts.by_category.items() if c != "tier2_pending"),
+                key=lambda kv: -kv[1],
+            )
+        )
+        + f". Remaining {pending_total} rows still NULL. Tier-2 Gemini classifier "
+        "mops these up daily but is gated by Free-Tier 20 RPD on gemini-2.5-flash."
     )
     lines.append(
-        "3. **Cherry Ventures' `talent.cherry.vc/jobs` board is portfolio-company "
-        "recruiting, not Cherry's own roles.** The 11 active rows under Cherry are "
-        "actually positions at Cherry-portfolio startups (Founding Engineer, Customer "
-        "Success Lead, FP&A, etc.). This is still useful for Career-Buddy users but "
-        "should be modelled separately (a `posted_by_vc` column might fit)."
+        "3. **Systematic out-of-scope blacklist via `vcs.skip_probe`.** Migration "
+        "0007 introduced the flag for VCs whose ATS embed cannot be scraped via "
+        "public API (Ashby private boards, Zoho Recruit, JS-only renders). Initial "
+        "blacklist: `11x.ai`, `500.co`. Every recurring 404/quota-loss should "
+        "either be pinned via `vc_overrides`, fixed via adapter expansion (≥3 VCs "
+        "needed before adding one), or marked skip_probe — never tolerated as "
+        "permanent error noise."
     )
     lines.append(
-        "4. **Tier-1 regex coverage on the operator track is low.** 1/17 active rows "
-        "(6%) matched the high-precision Tier-1 patterns. The other 16 are mostly "
-        "engineering or VC-internal admin titles where Tier-2 LLM classification "
-        "(deferred until an `ANTHROPIC_API_KEY` is provisioned) would help."
+        "4. **Greenhouse `boards-api` slug collision (fixed).** Bare-subdomain "
+        "regex `(?P<slug>[a-z0-9-]+)\\.greenhouse\\.io` was matching "
+        "`boards-api.greenhouse.io` and capturing `boards-api` as a slug, "
+        "producing fake (provider=greenhouse, slug=boards-api) errors for any "
+        "careers page that referenced the Greenhouse API URL (anduril.com, "
+        "glean.com). Fix in commit `c6442bd`: explicit `boards-api` pattern + "
+        "negative-lookahead for reserved subdomains. Two regression tests added."
     )
     lines.append(
-        "5. **HTML-discovery hop alone is insufficient for VC career pages.** All 15 "
-        "primary VCs failed direct-detect AND HTML-discovery on their own homepages "
-        "until we manually pinned 7 of them to verified ATS endpoints. A Phase A.1 "
-        "OpenVC + EU-Startups CSV import is needed to hit the 200-job stretch goal "
-        "in `scraper-plan.md`."
+        "5. **Tier-2 quota economics.** Free Tier `gemini-2.5-flash` = 20 RPD. "
+        "500 titles/batch ⇒ ~20 batches per ~10k pending rows ⇒ exactly one full "
+        "sweep per quota window. Schedule classify_tier2 daily after the 09:00 "
+        "CEST quota reset (cron `0 7 * * *` UTC)."
     )
     lines.append("")
 
     lines.append("## Recommended next actions\n")
     lines.append(
-        "1. **Phase A.1 — OpenVC + EU-Startups CSV ingest.** Get an order-of-magnitude "
-        "more VCs into `vcs`, dedupe against the Notion seed, expect ~1,500 rows. Even "
-        "if only 5% have direct ATS slugs that's ~75 boards to scrape."
+        "1. **Multi-page HTML-discovery.** `discover_ats` only scans `careers_url`. "
+        "Extending to `/jobs`, `/about`, `/team` (+ iframe/script-src introspection) "
+        "would unlock VCs that hide their ATS embed off the main careers page "
+        "(11x.ai is the canonical case)."
     )
     lines.append(
-        "2. **Phase C — portfolio-company scrape.** Cherry's portfolio jobs (and similar "
-        "talent boards from Speedinvest, Project A) are the real volume source. The "
-        "`scraper-plan.md` Phase C pulls portfolio company lists per VC and runs the "
-        "same 4 ATS adapters."
+        "2. **`vc_overrides` table.** Direct-ATS slug pinning when the auto-"
+        "discovered slug differs from reality (e.g. Notion Capital vs Notion Labs "
+        "collision). Cheaper and more auditable than amending discover_slugs "
+        "heuristics for every new edge case."
     )
     lines.append(
-        "3. **Tier-2 LLM classifier.** Provision `ANTHROPIC_API_KEY`, build the cheap "
-        "Claude-Haiku-4.5 classifier on (title + first 500 chars of description), "
-        "back-fill `role_category` for the 16 currently-pending rows."
+        "3. **Defer Zoho Recruit adapter.** Only 500.co needs it today; rule is "
+        "≥3 VCs before adding a new adapter. Re-evaluate when discover_slugs "
+        "round-N surfaces more Zoho boards."
     )
     lines.append(
-        "4. **Schema add: `posted_by_vc TEXT`** so portfolio-recruiting boards (Cherry's "
-        "`talent.cherry.vc`, Speedinvest's similar talent-redirection page) can be "
-        "stored without conflating the hiring company with the VC firm."
+        "4. **Schema add: `posted_by_vc TEXT`.** Portfolio-recruiting boards "
+        "(Cherry's `talent.cherry.vc`, Speedinvest's similar talent-redirection) "
+        "currently conflate the hiring company with the VC firm. Adding the "
+        "column lets us model both relationships cleanly."
     )
     lines.append("")
 

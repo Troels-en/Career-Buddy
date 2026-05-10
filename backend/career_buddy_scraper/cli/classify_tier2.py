@@ -110,20 +110,22 @@ def main() -> int:
         except (ValueError, json.JSONDecodeError) as e:
             console.print(f"[yellow]batch {batch_start} parse error: {e} — skip[/yellow]")
             continue
-        # Apply
+        # Apply — persist BOTH specific categories and `other` so rows are
+        # not re-processed next quota window (writeback-skip on "other"
+        # used to leave them NULL and burn ~75% of subsequent quota).
         with connect() as conn:
             with conn.cursor() as cur:
                 for idx, (job_id, _title) in enumerate(batch):
                     cat = mapping.get(idx)
                     if not cat:
                         continue
+                    cur.execute(
+                        "update jobs set role_category = %s where id = %s;",
+                        (cat, job_id),
+                    )
                     if cat == "other":
                         total_other += 1
                     else:
-                        cur.execute(
-                            "update jobs set role_category = %s where id = %s;",
-                            (cat, job_id),
-                        )
                         total_updated += 1
             conn.commit()
         console.print(

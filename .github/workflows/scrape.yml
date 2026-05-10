@@ -2,11 +2,27 @@ name: scrape-jobs
 
 on:
   schedule:
+    # 04:00 UTC = 06:00 CEST — nightly scrape + Tier-1 enrich
     - cron: "0 4 * * *"
+    # 07:00 UTC = 09:00 CEST — Tier-2 LLM classify (after Gemini Free-Tier 20-RPD reset)
+    - cron: "0 7 * * *"
   workflow_dispatch:
+    inputs:
+      job:
+        description: "which job to run (scrape | classify | both)"
+        required: false
+        default: "both"
+        type: choice
+        options:
+          - scrape
+          - classify
+          - both
 
 jobs:
   scrape:
+    if: |
+      github.event_name == 'schedule' && github.event.schedule == '0 4 * * *' ||
+      github.event_name == 'workflow_dispatch' && (inputs.job == 'scrape' || inputs.job == 'both')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -39,6 +55,9 @@ jobs:
       - name: Enrich structured JD attrs (years, salary, languages)
         run: uv run python -m career_buddy_scraper.cli.enrich_jobs
 
+      - name: Tier-1 regex classify (cheap, no quota)
+        run: uv run python -m career_buddy_scraper.cli.classify
+
       - name: Upload run artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -49,3 +68,34 @@ jobs:
             backend/artifacts/cache
           if-no-files-found: ignore
           retention-days: 7
+
+  classify_tier2:
+    if: |
+      github.event_name == 'schedule' && github.event.schedule == '0 7 * * *' ||
+      github.event_name == 'workflow_dispatch' && (inputs.job == 'classify' || inputs.job == 'both')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      # Tier-2 needs the Gemini API for LLM grading; opt-in flag.
+      GEMINI_FALLBACK_ENABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Sync deps
+        run: uv sync --frozen --extra gemini
+
+      - name: Tier-2 LLM classify (Gemini Free Tier, 20 RPD)
+        run: uv run python -m career_buddy_scraper.cli.classify_tier2
