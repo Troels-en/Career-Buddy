@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import CareerBuddy from "@/components/CareerBuddy";
 import { CinematicHero, SectionDivider } from "@/components/cinema";
+import { JobsFeed } from "@/components/jobs/JobsFeed";
 import { usePhoto } from "@/lib/cinema-theme";
 
 export const Route = createFileRoute("/jobs")({
@@ -19,11 +19,15 @@ export const Route = createFileRoute("/jobs")({
 });
 
 /**
- * Phase 0.5b minimum-viable jobs page. Renders CareerBuddy with the
- * `rolesOnly` flag — same role grid + filters + sort + RoleCards as
- * Overview, but profile / tracker / CV sections hidden. Phase 3 will
- * lift the role-grid into its own `src/components/jobs/*` module so
- * /jobs and / can render it without coupling to CareerBuddy state.
+ * Phase 3 — `/jobs` now mounts the standalone `<JobsFeed />` from
+ * `src/components/jobs/`. No more `<CareerBuddy rolesOnly />`
+ * placeholder coupling: this route fetches its own data, owns its own
+ * filter/sort state, and renders the role grid via the extracted
+ * `JobCard` + `FilterBar` components.
+ *
+ * Browse + filter + sort lives here; AI fit-analysis + tracker stay
+ * on Overview (`/`) where the monolith still owns the profile +
+ * applications state.
  */
 function JobsPage() {
   const heroImage = usePhoto("jobs");
@@ -45,7 +49,9 @@ function JobsPage() {
         }
       />
       <SectionDivider from="cream" to="white" />
-      <CareerBuddy rolesOnly />
+      <div className="bg-white">
+        <JobsFeed />
+      </div>
     </div>
   );
 }
