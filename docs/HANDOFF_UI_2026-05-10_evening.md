@@ -1,16 +1,29 @@
-# Handoff — Career-Buddy UI session (2026-05-10 evening)
+# Handoff — Career-Buddy UI session (2026-05-10 evening, round 7+)
 
 > Re-read end-to-end before doing anything. Previous chat reached
 > ~60% context — handed off here so the next chat picks up clean.
+>
+> **Round-7 update (2026-05-10 evening):** B (backend session) shipped
+> rich-state types lift + RTL coverage for ThemePicker + EmailAccounts
+> on top of the original ancestry. Decision locked: path **(a)
+> split-per-boundary** for the CV-profile-Supabase ask. B owns the
+> schema + edge-function + lib half (tasks 1–6 of CLAUDE_COORDINATION.md
+> "NEW ASK"); A wires the consumer components after (tasks 7–9).
+> See `docs/HANDOFF_2026-05-10_NEW_SESSION.md` for B's full task list.
 
 ## TL;DR
 
 - Live: `https://career-buddy.enigkt1.workers.dev`
 - Repo root: `/Users/troelsenigk/fa-track`. Branch `main`. All commits pushed.
-- HEAD: `5e9f5e7 feat(theme): wire ThemePicker + RootShell to Supabase user_tracks (0011)`
-- Two Claude Code sessions in parallel today. **`CLAUDE_COORDINATION.md` is the canonical boundary doc — read it.**
+- **HEAD on origin/main:** see `git log --oneline -1` (latest is
+  `e07e0f2` at hand-off time; B may push more before you pull).
+- Two Claude Code sessions in parallel today. **`CLAUDE_COORDINATION.md`
+  is the canonical boundary doc — read it.**
 - Phase 0 + 0.5 + 4 (all 3 steps) shipped. Phase 1.5 UI stub shipped.
-- **Open user ask:** real Supabase persistence for CV-analyzed profile + first-class skills extraction. Needs migration `0012_user_profile.sql` + `analyze-cv` edge-function skills section + `lib/profile-store.ts` dual-write. See "Next user-facing tasks" below.
+- **Open user ask:** real Supabase persistence for CV-analyzed profile +
+  first-class skills extraction. **Path (a) decided.** Wait for B's
+  commits 1–6 to land, then wire tasks 7–9 (CvUploadInline +
+  Profile Section 03). See "Next user-facing tasks" below.
 
 ## Two-session split (active)
 
@@ -21,10 +34,14 @@ Per `CLAUDE_COORDINATION.md`:
 | **A — UI session** (this handoff) | `src/routes/*`, `src/components/cinema/*`, `src/components/profile/*`, `public/sw.js`, `docs/design/*` |
 | **B — Backend + tooling** | `backend/*`, `data/migrations/*`, `supabase/functions/*` (with announce), `vitest.config.ts`, `playwright.config.ts`, `src/test/*`, `tests/*`, `src/lib/*` extraction |
 
-**Latest B activity** (per their last check-in):
-- Round 1–6 complete: 12 lib modules, 206 vitest tests, migrations 0010 + 0011, RTL coverage for `CvUploadInline`.
-- B greenlit two next steps from A: (1) lift rich-state types to `src/lib/types.ts`, (2) RTL tests for `ThemePicker` + `EmailAccounts`.
-- B pending — neither blocked: `lib/types.ts` lift, RTL tests for new components, optional Phase 1.6 backend OAuth.
+**Latest B activity** (round 7 shipped, end of last B session):
+- Round 1–6 complete: 12 lib modules, 244 vitest tests, migrations 0010 + 0011, RTL coverage for `CvUploadInline`.
+- Round 7 complete: rich-state types + state helpers lifted to
+  `src/lib/types.ts` + `src/lib/state.ts` (commit `6982329`); RTL
+  coverage for `ThemePicker` + `EmailAccounts` (commit `a8a08a4`).
+- B's next round (round 8) per their hand-off: ship the 6
+  CV-profile-Supabase tasks listed under "NEW ASK" in
+  `CLAUDE_COORDINATION.md`. A is waiting on those for the wire.
 
 ## What ships on origin/main right now
 
@@ -73,23 +90,26 @@ b2085d5  feat(design): Cinema (Sage) design system across all routes
 
 User asked: does CV → analysis → structure → skills → Supabase save work? Answer: 4/5 yes, 1/5 no (Supabase save). To finish the loop:
 
-| Task | Owner per coord doc | Crosses boundary? |
-|---|---|---|
-| `data/migrations/0012_user_profile.sql` (skills JSONB, work_history JSONB, etc.) | B | yes if A does it |
-| Mirror `supabase/migrations/<ts>_user_profile.sql` + apply to Supabase | B | yes |
-| `supabase/functions/analyze-cv/index.ts` — add `skills` first-class section to prompt + return shape | A or B with announce | shared territory |
-| Regenerate `src/integrations/supabase/types.ts` after 0010+0011+0012 | B | yes |
-| `src/lib/profile-store.ts` dual-write to Supabase `user_profile` | B | yes (lib/* is B's) |
-| `src/lib/cv-storage.ts` `mergeAnalysisIntoState` consume new `skills` field | B (lib/*) | yes |
-| `src/components/profile/CvUploadInline.tsx` — call new dual-write helper | A | A's territory |
-| `src/routes/profile.tsx` Section 03 Skills — replace placeholder with live skills list | A | A's territory |
+| # | Task | Owner | Status |
+|---|---|---|---|
+| 1 | `data/migrations/0012_user_profile.sql` (skills JSONB, work_history JSONB, etc.) | B | pending B's round 8 |
+| 2 | Mirror `supabase/migrations/<ts>_user_profile.sql` + apply | B | pending |
+| 3 | `supabase/functions/analyze-cv/index.ts` — `skills` first-class | B | pending |
+| 4 | Regen `src/integrations/supabase/types.ts` | B | pending |
+| 5 | `src/lib/cv-storage.ts` consume new `skills` field | B | pending |
+| 6 | `src/lib/profile-store.ts` Supabase dual-write + setProfileFromAnalysis | B | pending |
+| **7** | `src/components/profile/CvUploadInline.tsx` — call new helper | **A** | **waits on 1–6** |
+| **8** | `src/routes/profile.tsx` Section 03 Skills — live skills list | **A** | **waits on 1–6** |
+| **9** | UI smoke test of full loop (upload → analyse → skills → reload → Supabase) | **A** | **waits on 1–6** |
 
-**Two paths forward:**
+**Path (a) decided** (split-per-boundary). Full task spec in
+`CLAUDE_COORDINATION.md` "NEW ASK" section. B's hand-off
+(`docs/HANDOFF_2026-05-10_NEW_SESSION.md`) lists tasks 1–6 in detail.
 
-1. **(a) Stay split** — ping B with greenlight to ship the migration + lib changes; A does CvUploadInline wire + Skills section UI after. Lower risk of merge collision.
-2. **(b) UI session does it all** — write migration in `data/migrations/0012_user_profile.sql`, mirror to `supabase/migrations/<ts>_user_profile.sql`, update analyze-cv edge function, regen types via `npx supabase gen types typescript --linked`, write profile-store dual-write, wire UI. Faster but crosses the convention boundary.
-
-**User preference signal:** "kannst du das alles nicht selber machen?" — leans toward (b). If new chat goes (b), update CLAUDE_COORDINATION.md FIRST so B sees the boundary change before they pull.
+**A's working order for the wire:** when B pings that 1–6 are done
+(or you see the commits land via `git pull`), do tasks 7, 8, 9 in
+sequence. Push commit-by-commit. Smoke-test live before declaring
+done. Then update CLAUDE_COORDINATION.md round-N "Last sync" line.
 
 ## Next visual / UX TODOs
 
