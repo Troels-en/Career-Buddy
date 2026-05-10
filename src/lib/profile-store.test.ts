@@ -1,16 +1,40 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+const mockUpsert = vi.fn().mockResolvedValue({ data: null, error: null });
+const mockMaybeSingle = vi.fn();
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    from: () => ({
+      upsert: (...args: unknown[]) => mockUpsert(...args),
+      select: () => ({
+        is: () => ({
+          limit: () => ({
+            maybeSingle: () => mockMaybeSingle(),
+          }),
+        }),
+      }),
+    }),
+  },
+}));
 
 import {
   TRACKS_KEY,
   YEARS_BUCKET_KEY,
   YEARS_BUCKET_RANGES,
+  fetchPersistedProfile,
+  initProfileFromSupabase,
   loadSelectedTracks,
   loadYearsBucket,
+  setProfileFromAnalysis,
   setSelectedTracks,
   setYearsBucket,
   type YearsBucketId,
 } from "./profile-store";
-import { STORAGE_KEY, loadCareerBuddyState } from "./cv-storage";
+import {
+  STORAGE_KEY,
+  loadCareerBuddyState,
+  type CvAnalysisResponse,
+} from "./cv-storage";
 
 // ---------------------------------------------------------------------------
 // Tracks — dual-write + dual-read
@@ -206,5 +230,200 @@ describe("round-trip", () => {
     const state = loadCareerBuddyState();
     expect(state.profile?.target_role_categories).toEqual(["chief-of-staff"]);
     expect(state.profile?.years_min).toBe(10);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Supabase dual-write — setProfileFromAnalysis + initProfileFromSupabase
+// ---------------------------------------------------------------------------
+
+const sampleAnalysis: CvAnalysisResponse = {
+  summary: "Strong B2B sales background.",
+  fit_score: 7.5,
+  strengths: ["B2B sales", "German native"],
+  gaps: ["No SaaS PM experience"],
+  recommendations: ["Apply to BizOps + Strategy"],
+  target_role_categories: ["bizops", "strategy"],
+  location_preferences: ["Berlin"],
+  name: "Troels Enigk",
+  headline: "CLSBE Master, ex-BDR",
+  skills: [
+    { name: "Python", level: "advanced", years: 4 },
+    { name: "SQL", level: "expert", years: 6 },
+  ],
+};
+
+describe("setProfileFromAnalysis", () => {
+  beforeEach(() => {
+    mockUpsert.mockClear().mockResolvedValue({ data: null, error: null });
+    mockMaybeSingle.mockReset();
+  });
+
+  test("merges analysis into localStorage and stamps updated_at", async () => {
+    await setProfileFromAnalysis(sampleAnalysis, "cv.pdf");
+    const state = loadCareerBuddyState();
+    expect(state.profile?.cv_analyzed).toBe(true);
+    expect(state.profile?.cv_filename).toBe("cv.pdf");
+    expect(state.profile?.skills).toEqual(sampleAnalysis.skills);
+    expect(typeof state.profile?.updated_at).toBe("string");
+  });
+
+  test("upserts the row to user_profile with user_id null", async () => {
+    await setProfileFromAnalysis(sampleAnalysis, "cv.pdf");
+    expect(mockUpsert).toHaveBeenCalledTimes(1);
+    const [row, opts] = mockUpsert.mock.calls[0];
+    expect(opts).toEqual({ onConflict: "user_id", ignoreDuplicates: false });
+    expect(row.user_id).toBeNull();
+    expect(row.name).toBe("Troels Enigk");
+    expect(row.headline).toBe("CLSBE Master, ex-BDR");
+    expect(row.skills).toEqual(sampleAnalysis.skills);
+    expect(row.target_role_categories).toEqual(["bizops", "strategy"]);
+    expect(row.location_preferences).toEqual(["Berlin"]);
+    expect(typeof row.updated_at).toBe("string");
+  });
+
+  test("Supabase failure does not throw; localStorage still saved", async () => {
+    mockUpsert.mockRejectedValueOnce(new Error("network down"));
+    await expect(
+      setProfileFromAnalysis(sampleAnalysis, "cv.pdf"),
+    ).resolves.toBeUndefined();
+    const state = loadCareerBuddyState();
+    expect(state.profile?.name).toBe("Troels Enigk");
+  });
+});
+
+describe("fetchPersistedProfile", () => {
+  beforeEach(() => {
+    mockUpsert.mockClear();
+    mockMaybeSingle.mockReset();
+  });
+
+  test("returns row data on success", async () => {
+    const row = { user_id: null, name: "X", updated_at: "2026-05-10T12:00:00Z" };
+    mockMaybeSingle.mockResolvedValueOnce({ data: row, error: null });
+    const out = await fetchPersistedProfile();
+    expect(out).toEqual(row);
+  });
+
+  test("returns null when no row exists", async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    expect(await fetchPersistedProfile()).toBeNull();
+  });
+
+  test("returns null on error", async () => {
+    mockMaybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: { message: "table missing" },
+    });
+    expect(await fetchPersistedProfile()).toBeNull();
+  });
+
+  test("returns null when query throws", async () => {
+    mockMaybeSingle.mockRejectedValueOnce(new Error("network"));
+    expect(await fetchPersistedProfile()).toBeNull();
+  });
+});
+
+describe("initProfileFromSupabase", () => {
+  beforeEach(() => {
+    mockUpsert.mockClear();
+    mockMaybeSingle.mockReset();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("no-op when no Supabase row", async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    await initProfileFromSupabase();
+    expect(loadCareerBuddyState()).toEqual({});
+  });
+
+  test("merges remote row into local state when local has no timestamp", async () => {
+    mockMaybeSingle.mockResolvedValueOnce({
+      data: {
+        user_id: null,
+        name: "Remote Name",
+        headline: "Remote Headline",
+        skills: [{ name: "Rust", level: "intermediate" }],
+        work_history: [{ company: "X", role: "Y" }],
+        education: [],
+        target_role: "FA",
+        target_geo: "Berlin",
+        target_role_categories: ["bizops"],
+        location_preferences: ["Berlin"],
+        cv_filename: "cv.pdf",
+        cv_summary: "Summary",
+        cv_fit_score: 8,
+        updated_at: "2026-05-10T12:00:00Z",
+      },
+      error: null,
+    });
+    await initProfileFromSupabase();
+    const state = loadCareerBuddyState();
+    expect(state.profile?.name).toBe("Remote Name");
+    expect(state.profile?.headline).toBe("Remote Headline");
+    expect(state.profile?.skills).toEqual([{ name: "Rust", level: "intermediate" }]);
+    expect(state.profile?.target_role_categories).toEqual(["bizops"]);
+    expect(state.profile?.cv_fit_score).toBe(8);
+    expect(state.profile?.updated_at).toBe("2026-05-10T12:00:00Z");
+  });
+
+  test("local wins when local updated_at >= remote updated_at", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        profile: {
+          name: "Local Name",
+          updated_at: "2026-05-11T00:00:00Z",
+        },
+      }),
+    );
+    mockMaybeSingle.mockResolvedValueOnce({
+      data: {
+        user_id: null,
+        name: "Remote Name",
+        skills: [],
+        work_history: [],
+        education: [],
+        target_role_categories: [],
+        location_preferences: [],
+        updated_at: "2026-05-10T00:00:00Z",
+      },
+      error: null,
+    });
+    await initProfileFromSupabase();
+    const state = loadCareerBuddyState();
+    expect(state.profile?.name).toBe("Local Name");
+  });
+
+  test("empty remote fields do not overwrite filled local fields", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        profile: {
+          name: "Local Name",
+          skills: [{ name: "kept" }],
+        },
+      }),
+    );
+    mockMaybeSingle.mockResolvedValueOnce({
+      data: {
+        user_id: null,
+        name: "",
+        skills: [],
+        work_history: [],
+        education: [],
+        target_role_categories: [],
+        location_preferences: [],
+        updated_at: "2026-05-10T00:00:00Z",
+      },
+      error: null,
+    });
+    await initProfileFromSupabase();
+    const state = loadCareerBuddyState();
+    expect(state.profile?.name).toBe("Local Name");
+    expect(state.profile?.skills).toEqual([{ name: "kept" }]);
   });
 });

@@ -24,10 +24,16 @@
  * already does per-test).
  */
 
+import { supabase } from "@/integrations/supabase/client";
+
 import {
   loadCareerBuddyState,
+  mergeAnalysisIntoState,
   saveCareerBuddyState,
   type CareerBuddyState,
+  type CvAnalysisResponse,
+  type Profile,
+  type SkillEntry,
 } from "./cv-storage";
 
 export const TRACKS_KEY = "career-buddy-tracks-v1";
@@ -153,4 +159,171 @@ export function setYearsBucket(bucket: YearsBucketId): void {
     },
   };
   saveCareerBuddyState(next);
+}
+
+// ---------------------------------------------------------------------------
+// Supabase persistence — `user_profile` (migration 0012)
+//
+// Single-user-app shape: one row with `user_id IS NULL`, same convention as
+// 0010 / 0011. The COALESCE-based unique index keeps the upsert idempotent
+// without an auth context. Generated supabase/types.ts now carries the
+// row shape (see 6b1a2b3) but we still cast to `never` for the strict
+// client because the `Database["public"]["Tables"]` lookup path in
+// supabase-js is invariant on the literal table-name parameter.
+// ---------------------------------------------------------------------------
+
+type UserProfileRow = {
+  user_id: string | null;
+  name: string | null;
+  headline: string | null;
+  summary: string | null;
+  skills: SkillEntry[];
+  work_history: unknown[];
+  education: unknown[];
+  target_role: string | null;
+  target_geo: string | null;
+  target_role_categories: string[];
+  location_preferences: string[];
+  cv_filename: string | null;
+  cv_summary: string | null;
+  cv_fit_score: number | null;
+  updated_at: string;
+};
+
+function profileToRow(profile: Profile): UserProfileRow {
+  const arr = (v: unknown): string[] =>
+    Array.isArray(v) ? (v.filter((x) => typeof x === "string") as string[]) : [];
+  const str = (v: unknown): string | null =>
+    typeof v === "string" && v.trim() ? v : null;
+  const num = (v: unknown): number | null =>
+    typeof v === "number" && Number.isFinite(v) ? v : null;
+  return {
+    user_id: null,
+    name: str(profile.name),
+    headline: str(profile.headline),
+    summary: null,
+    skills: Array.isArray(profile.skills) ? profile.skills : [],
+    work_history: Array.isArray(profile.work_history) ? (profile.work_history as unknown[]) : [],
+    education: Array.isArray(profile.education) ? (profile.education as unknown[]) : [],
+    target_role: str(profile.target_role),
+    target_geo: str(profile.target_geo),
+    target_role_categories: arr(profile.target_role_categories),
+    location_preferences: arr(profile.location_preferences),
+    cv_filename: str(profile.cv_filename),
+    cv_summary: str(profile.cv_summary) ?? (profile.cv_summary === null ? null : null),
+    cv_fit_score: num(profile.cv_fit_score),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+/**
+ * Merge the analyze-cv response into local state + best-effort upsert
+ * to Supabase `user_profile`. localStorage stays canonical: if the
+ * network call fails (offline, RLS, missing columns) the function
+ * still returns successfully so the UI doesn't lose user data.
+ *
+ * Stamps `profile.updated_at` (ISO string) on the local profile so
+ * the init path can compare timestamps with Supabase's `updated_at`.
+ */
+export async function setProfileFromAnalysis(
+  analysis: CvAnalysisResponse,
+  cvFilename: string,
+): Promise<void> {
+  const prior = loadCareerBuddyState();
+  const merged = mergeAnalysisIntoState(prior, analysis, cvFilename);
+  const updatedAt = new Date().toISOString();
+  const next: CareerBuddyState = {
+    ...merged,
+    profile: {
+      ...(merged.profile ?? {}),
+      updated_at: updatedAt,
+    },
+  };
+  saveCareerBuddyState(next);
+
+  try {
+    const row = profileToRow(next.profile as Profile);
+    row.updated_at = updatedAt;
+    await supabase
+      .from("user_profile" as never)
+      .upsert(row as never, { onConflict: "user_id", ignoreDuplicates: false });
+  } catch {
+    /* ignore — localStorage is the canonical store while offline */
+  }
+}
+
+/**
+ * Fetch the persisted user_profile row for the current user (single-
+ * user app: `user_id IS NULL`). Returns `null` if no row, the table
+ * doesn't exist yet, or the network call fails.
+ */
+export async function fetchPersistedProfile(): Promise<UserProfileRow | null> {
+  try {
+    const { data, error } = await supabase
+      .from("user_profile" as never)
+      .select(
+        "user_id,name,headline,summary,skills,work_history,education,target_role,target_geo,target_role_categories,location_preferences,cv_filename,cv_summary,cv_fit_score,updated_at",
+      )
+      .is("user_id", null)
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as unknown as UserProfileRow;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * On app init, fetch the Supabase user_profile row and merge into
+ * local state when Supabase is newer (per `updated_at`). Empty
+ * Supabase fields never overwrite filled local fields. Local timestamp
+ * is read from `profile.updated_at`; missing or invalid local
+ * timestamp counts as "stale" so Supabase wins on first install.
+ *
+ * Best-effort: silent on any network failure.
+ */
+export async function initProfileFromSupabase(): Promise<void> {
+  const row = await fetchPersistedProfile();
+  if (!row) return;
+  const state = loadCareerBuddyState();
+  const local = state.profile ?? {};
+  const localTs = parseTs(local.updated_at);
+  const remoteTs = parseTs(row.updated_at);
+  if (localTs !== null && remoteTs !== null && remoteTs <= localTs) return;
+
+  const next: Profile = { ...local };
+  applyIfPresent(next, "name", row.name);
+  applyIfPresent(next, "headline", row.headline);
+  applyIfArray(next, "skills", row.skills);
+  applyIfArray(next, "work_history", row.work_history);
+  applyIfArray(next, "education", row.education);
+  applyIfPresent(next, "target_role", row.target_role);
+  applyIfPresent(next, "target_geo", row.target_geo);
+  applyIfArray(next, "target_role_categories", row.target_role_categories);
+  applyIfArray(next, "location_preferences", row.location_preferences);
+  applyIfPresent(next, "cv_filename", row.cv_filename);
+  applyIfPresent(next, "cv_summary", row.cv_summary);
+  if (typeof row.cv_fit_score === "number") next.cv_fit_score = row.cv_fit_score;
+  next.updated_at = row.updated_at;
+
+  saveCareerBuddyState({ ...state, profile: next });
+}
+
+function parseTs(value: unknown): number | null {
+  if (typeof value !== "string" || !value) return null;
+  const t = Date.parse(value);
+  return Number.isFinite(t) ? t : null;
+}
+
+function applyIfPresent(target: Profile, key: keyof Profile, value: unknown): void {
+  if (typeof value === "string" && value.trim()) {
+    (target as Record<string, unknown>)[key as string] = value;
+  }
+}
+
+function applyIfArray(target: Profile, key: keyof Profile, value: unknown): void {
+  if (Array.isArray(value) && value.length > 0) {
+    (target as Record<string, unknown>)[key as string] = value;
+  }
 }
