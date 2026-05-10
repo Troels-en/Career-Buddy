@@ -125,7 +125,7 @@ def _truncate(text: str, limit: int) -> str:
 
 def extract_greenhouse(raw_payload: dict[str, Any]) -> tuple[str, str]:
     """Greenhouse: ``content`` is HTML-escaped HTML."""
-    content = str(raw_payload.get("content", ""))
+    content = str(raw_payload.get("content") or "")
     description = _html_to_text(content)
     requirements = _find_requirements_section(description)
     return _truncate(description, DESCRIPTION_LIMIT), _truncate(
@@ -136,7 +136,7 @@ def extract_greenhouse(raw_payload: dict[str, Any]) -> tuple[str, str]:
 def extract_lever(raw_payload: dict[str, Any]) -> tuple[str, str]:
     """Lever: descriptionPlain + additionalPlain + structured ``lists``."""
     parts: list[str] = []
-    desc_plain = str(raw_payload.get("descriptionPlain") or raw_payload.get("descriptionBodyPlain", ""))
+    desc_plain = str(raw_payload.get("descriptionPlain") or raw_payload.get("descriptionBodyPlain") or "")
     if desc_plain:
         parts.append(desc_plain.strip())
 
@@ -149,8 +149,8 @@ def extract_lever(raw_payload: dict[str, Any]) -> tuple[str, str]:
         for lst in lists:
             if not isinstance(lst, dict):
                 continue
-            heading = str(lst.get("text", "")).strip()
-            content_html = str(lst.get("content", ""))
+            heading = str(lst.get("text") or "").strip()
+            content_html = str(lst.get("content") or "")
             content_text = _html_to_text(content_html)
             if not content_text:
                 continue
@@ -162,7 +162,7 @@ def extract_lever(raw_payload: dict[str, Any]) -> tuple[str, str]:
     if list_blocks:
         parts.append("\n\n".join(list_blocks))
 
-    additional = str(raw_payload.get("additionalPlain", ""))
+    additional = str(raw_payload.get("additionalPlain") or "")
     if additional:
         parts.append(additional.strip())
 
@@ -175,10 +175,10 @@ def extract_lever(raw_payload: dict[str, Any]) -> tuple[str, str]:
 
 def extract_ashby(raw_payload: dict[str, Any]) -> tuple[str, str]:
     """Ashby: ``descriptionPlain`` already clean."""
-    description = str(raw_payload.get("descriptionPlain", "")).strip()
+    description = str(raw_payload.get("descriptionPlain") or "").strip()
     if not description:
         # Fallback to descriptionHtml if plain missing.
-        description = _html_to_text(str(raw_payload.get("descriptionHtml", "")))
+        description = _html_to_text(str(raw_payload.get("descriptionHtml") or ""))
     requirements = _find_requirements_section(description)
     return _truncate(description, DESCRIPTION_LIMIT), _truncate(
         requirements, REQUIREMENTS_LIMIT

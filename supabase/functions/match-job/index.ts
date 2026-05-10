@@ -286,11 +286,20 @@ function validateAndClamp(parsed: unknown, job: JobInput): ValidatedMatch | null
   let missing_skills = stringArray(p.missing_skills, 5);
 
   // Drop missing-skill entries that don't actually appear in the JD requirements/description.
+  // Multi-word skills must have ALL their substantive tokens (length>=4) in the haystack —
+  // otherwise "machine learning" passes when only "machine" is mentioned.
   const jdHaystack = `${job.requirements ?? ""} ${job.description ?? ""}`.toLowerCase();
   if (jdHaystack.length > 0) {
     missing_skills = missing_skills.filter((s) => {
-      const tok = s.toLowerCase().split(/\s+/)[0];
-      return tok.length < 3 || jdHaystack.includes(tok);
+      const tokens = s
+        .toLowerCase()
+        .split(/[\s,/.\-()]+/)
+        .filter((t) => t.length >= 4);
+      if (tokens.length === 0) {
+        // Skill is short / single-word and < 4 chars — accept (e.g. "SQL" hits via the substring path below).
+        return jdHaystack.includes(s.toLowerCase());
+      }
+      return tokens.every((t) => jdHaystack.includes(t));
     });
   }
 

@@ -44,15 +44,23 @@ BATCH_SIZE = 200
 MAX_FAILURE_SAMPLES = 5
 
 
-def _select_sql(force: bool, ats: str | None, limit: int | None) -> tuple[str, list[Any]]:
+def _select_sql(force: bool, retry_requirements: bool, ats: str | None, limit: int | None) -> tuple[str, list[Any]]:
     where = ["is_active = true"]
     params: list[Any] = []
     if not force:
-        # Resume on description-missing OR description-OK-but-requirements-still-empty.
-        where.append(
-            "(description is null or length(description) < 100"
-            " or requirements is null or length(requirements) < 30)"
-        )
+        if retry_requirements:
+            # Aggressive: retry rows whose requirements are still empty (the
+            # default before this flag was added). Re-checks every JD where the
+            # extractor came up empty — wasteful but useful after extractor
+            # changes that might rescue previously-missed sections.
+            where.append(
+                "(description is null or length(description) < 100"
+                " or requirements is null or length(requirements) < 30)"
+            )
+        else:
+            # Lean: only retry rows whose description is missing/short. Rows where
+            # requirements is genuinely empty (no detectable heading) stay empty.
+            where.append("(description is null or length(description) < 100)")
     if ats:
         where.append("ats_source = %s")
         params.append(ats)
@@ -74,12 +82,23 @@ def _select_sql(force: bool, ats: str | None, limit: int | None) -> tuple[str, l
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="Re-extract even when description already populated.")
+    parser.add_argument(
+        "--retry-requirements",
+        action="store_true",
+        help="Also re-process rows whose description is OK but requirements is empty. "
+        "Useful after a regex change; wasteful as a daily default.",
+    )
     parser.add_argument("--ats", choices=SUPPORTED_ATS, default=None, help="Restrict to a single ATS source.")
     parser.add_argument("--limit", type=int, default=None, help="Cap rows processed.")
     parser.add_argument("--dry-run", action="store_true", help="Compute extractions but skip the UPDATE.")
     args = parser.parse_args()
 
-    select_sql, params = _select_sql(force=args.force, ats=args.ats, limit=args.limit)
+    select_sql, params = _select_sql(
+        force=args.force,
+        retry_requirements=args.retry_requirements,
+        ats=args.ats,
+        limit=args.limit,
+    )
 
     counters: dict[str, int] = defaultdict(int)
     by_ats: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))

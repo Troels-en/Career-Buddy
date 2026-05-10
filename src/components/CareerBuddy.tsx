@@ -283,20 +283,19 @@ function tokensMatch(a: string, b: string): boolean {
 function intersect(profile: Set<string>, job: Set<string>): string[] {
   if (profile.size === 0 || job.size === 0) return [];
   const matched: string[] = [];
-  // Iterate the smaller set for speed.
-  const [small, large] = profile.size <= job.size ? [profile, job] : [job, profile];
-  for (const t of small) {
-    if (large.has(t)) {
+  // Iterate the profile set so the returned tokens are profile-anchored
+  // (the user-facing label that gets shown back to them in fitWhy()).
+  for (const t of profile) {
+    if (job.has(t)) {
       matched.push(t);
       continue;
     }
-    // Fuzzy fallback only if profile/job both contain stem-similar tokens.
-    if (small === profile) {
-      for (const j of job) {
-        if (tokensMatch(t, j)) {
-          matched.push(t);
-          break;
-        }
+    // Symmetric stem-prefix fallback (sales/sale, manager/managers). tokensMatch
+    // already handles both directions internally.
+    for (const j of job) {
+      if (tokensMatch(t, j)) {
+        matched.push(t);
+        break;
       }
     }
   }
@@ -1178,6 +1177,25 @@ export default function CareerBuddy() {
   const profYears = useMemo(() => profileYearsExperience(state.profile), [state.profile]);
   const profSig = useMemo(() => profileSignature(state.profile), [state.profile]);
 
+  // When profile signature changes, drop in-memory matches that were graded
+  // against the old signature. Otherwise stale chips keep rendering on JobCard
+  // until the user reloads.
+  useEffect(() => {
+    if (!hydrated) return;
+    setMatches((m) => {
+      let dirty = false;
+      const next: Record<string, MatchEntry> = {};
+      for (const [k, v] of Object.entries(m)) {
+        if (v.status === "ready" && v.profile_signature !== profSig) {
+          dirty = true;
+          continue;
+        }
+        next[k] = v;
+      }
+      return dirty ? next : m;
+    });
+  }, [profSig, hydrated]);
+
   // Persist match cache; evict entries whose profile_signature no longer matches.
   useEffect(() => {
     if (!hydrated) return;
@@ -1190,11 +1208,19 @@ export default function CareerBuddy() {
     persistMatchCache(cache);
   }, [matches, profSig, hydrated]);
 
+  // Count requests-attempted-today, not just successful matches. Errors and
+  // in-flight calls also burn quota.
   const matchesUsedToday = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
     let n = 0;
     for (const v of Object.values(matches)) {
-      if (v.status === "ready" && v.computed_at && new Date(v.computed_at).toISOString().slice(0, 10) === today) n++;
+      if (v.status === "loading") {
+        n++;
+      } else if (v.status === "ready" && v.computed_at && new Date(v.computed_at).toISOString().slice(0, 10) === today) {
+        n++;
+      } else if (v.status === "error") {
+        n++;
+      }
     }
     return n;
   }, [matches]);
@@ -1227,15 +1253,18 @@ export default function CareerBuddy() {
           },
         },
       });
-      if (error) throw error;
+      if (error) {
+        // supabase-js wraps non-2xx as FunctionsHttpError with .context.status.
+        const status = (error as { context?: { status?: number } })?.context?.status;
+        if (status === 429) {
+          tripQuotaCooldown();
+        }
+        throw error;
+      }
       const payload = data as { match?: MatchResult; error?: string };
       if (!payload?.match) {
         const errMsg = payload?.error || "No match returned";
-        if (/quota/i.test(errMsg)) {
-          const now = Date.now();
-          setMatchQuotaHit(now);
-          writeQuotaState({ quotaHitAt: now, runs: { date: new Date().toISOString().slice(0, 10), count: 0 } });
-        }
+        if (/quota/i.test(errMsg)) tripQuotaCooldown();
         throw new Error(errMsg);
       }
       setMatches((m) => ({
@@ -1244,8 +1273,19 @@ export default function CareerBuddy() {
       }));
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Match failed";
+      // Some supabase-js error paths surface 429 only via the thrown error's message.
+      if (/(?:^|\s)429(?:\s|$)|quota/i.test(msg)) tripQuotaCooldown();
       setMatches((m) => ({ ...m, [key]: { status: "error", error: msg } }));
     }
+  }
+
+  function tripQuotaCooldown() {
+    const now = Date.now();
+    setMatchQuotaHit(now);
+    writeQuotaState({
+      quotaHitAt: now,
+      runs: { date: new Date().toISOString().slice(0, 10), count: 0 },
+    });
   }
 
   async function pumpMatchQueue() {
