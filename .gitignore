@@ -14,6 +14,11 @@ build/
 .claude/
 artifacts/
 
+# Browser-driver screenshots — test artefacts, not source
+cinema-*.png
+cohesion-*.png
+route-*.png
+
 # Stray non-project files (move out when convenient)
 low_fodmap_foods.csv
 

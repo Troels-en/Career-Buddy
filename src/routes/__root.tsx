@@ -11,6 +11,7 @@ import {
 
 import appCss from "../styles.css?url";
 import { Nav } from "@/components/Nav";
+import { PromoBar, SiteFooter } from "@/components/cinema";
 
 function NotFoundComponent() {
   return (
@@ -74,7 +75,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { name: "theme-color", content: "#7c3aed" },
+      { name: "theme-color", content: "#1c2620" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-title", content: "Career-Buddy" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
@@ -126,8 +127,18 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Nav />
-      <Outlet />
+      <div className="min-h-screen flex flex-col bg-cinema-mist">
+        <PromoBar
+          message="9,980 live operator-track roles · refreshed every night"
+          href="/"
+          cta="See live"
+        />
+        <Nav />
+        <main className="flex-1">
+          <Outlet />
+        </main>
+        <SiteFooter />
+      </div>
     </QueryClientProvider>
   );
 }

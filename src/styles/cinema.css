@@ -1,0 +1,269 @@
+/*
+ * Career-Buddy "Cinema" theme — Tailwind v4 token additions.
+ *
+ * Imported from src/styles.css. Adds new utility classes prefixed
+ * with `cinema-`, plus glass utilities and a typography scale.
+ *
+ * Lives in PARALLEL to the shadcn-blue palette; nothing here
+ * overrides --background / --foreground / --primary etc., so
+ * existing app pages render unchanged.
+ *
+ * Palette: cool, light sage greens — Career-Buddy's "buddy" feel.
+ * Tokens documented in docs/design/design-system.md.
+ */
+
+@theme inline {
+  /* Cinema palette (oklch) — soft, cool, sage-leaning */
+  --color-cinema-moss:      oklch(0.22 0.025 160);
+  --color-cinema-pine:      oklch(0.42 0.06 155);
+  --color-cinema-sage:      oklch(0.74 0.05 152);
+  --color-cinema-mint:      oklch(0.87 0.04 155);
+  --color-cinema-mist:      oklch(0.95 0.02 155);
+  --color-cinema-cream:     oklch(0.975 0.012 150);
+  --color-cinema-meadow:    oklch(0.78 0.12 148);
+  --color-cinema-ink:       oklch(0.18 0.018 165);
+  --color-cinema-ink-soft:  oklch(0.36 0.015 165);
+  --color-cinema-ink-mute:  oklch(0.55 0.012 165);
+
+  /* Glass tints (rgba — partner with backdrop-filter).
+   * Cool, almost-white with a green wash. */
+  --color-glass-mist:         rgba(238, 244, 234, 0.72);
+  --color-glass-sage:         rgba(190, 213, 195, 0.58);
+  --color-glass-dark:         rgba(28, 38, 30, 0.62);
+  --color-glass-stroke-light: rgba(255, 255, 255, 0.55);
+  --color-glass-stroke-dark:  rgba(0, 0, 0, 0.18);
+
+  /* Blur scale */
+  --blur-glass-soft:  12px;
+  --blur-glass:       20px;
+  --blur-glass-heavy: 36px;
+
+  /* Radii */
+  --radius-glass:    1.25rem;
+  --radius-glass-lg: 1.75rem;
+  --radius-pill:     9999px;
+
+  /* Type stack */
+  --font-cinema-display: "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif;
+  --font-cinema-body:    "Inter", "SF Pro Text",    system-ui, -apple-system, sans-serif;
+}
+
+/*
+ * Typography utilities.
+ *
+ * `text-cinema-display` is the hero headline; ships with a hand-drawn
+ * underline accent applied via the .cinema-headline-underline modifier
+ * (used by CinematicHero).
+ */
+@utility text-cinema-display {
+  font-family: var(--font-cinema-display);
+  font-size: clamp(3rem, 6.5vw + 1rem, 7rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+  color: var(--color-cinema-ink);
+}
+
+@utility text-cinema-h1 {
+  font-family: var(--font-cinema-display);
+  font-size: clamp(2.25rem, 3.5vw + 1rem, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--color-cinema-ink);
+}
+
+@utility text-cinema-h2 {
+  font-family: var(--font-cinema-display);
+  font-size: clamp(1.75rem, 1.6vw + 1rem, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  color: var(--color-cinema-ink);
+}
+
+@utility text-cinema-eyebrow {
+  font-family: var(--font-cinema-body);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-cinema-ink-mute);
+}
+
+@utility text-cinema-body {
+  font-family: var(--font-cinema-body);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--color-cinema-ink-soft);
+}
+
+@utility text-cinema-caption {
+  font-family: var(--font-cinema-body);
+  font-size: 1rem;
+  letter-spacing: 0.005em;
+  color: var(--color-cinema-ink-mute);
+}
+
+/*
+ * Glass primitives.
+ *
+ * Three variants stacked the same way: blur + tint + 1px inner highlight.
+ * NEVER add a drop-shadow — depth is blur+tint only.
+ *
+ * `@supports not` fallback uses solid mist so glass-less browsers
+ * still get a readable surface.
+ */
+@utility glass-card {
+  position: relative;
+  border-radius: var(--radius-glass);
+  background-color: var(--color-glass-mist);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(140%);
+  backdrop-filter: blur(var(--blur-glass)) saturate(140%);
+  box-shadow: inset 0 1px 0 0 var(--color-glass-stroke-light);
+  color: var(--color-cinema-ink);
+}
+
+@utility glass-card-warm {
+  position: relative;
+  border-radius: var(--radius-glass);
+  background-color: var(--color-glass-sage);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(135%);
+  backdrop-filter: blur(var(--blur-glass)) saturate(135%);
+  box-shadow: inset 0 1px 0 0 var(--color-glass-stroke-light);
+  color: var(--color-cinema-ink);
+}
+
+@utility glass-card-dark {
+  position: relative;
+  border-radius: var(--radius-glass);
+  background-color: var(--color-glass-dark);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(120%);
+  backdrop-filter: blur(var(--blur-glass)) saturate(120%);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px var(--color-glass-stroke-dark);
+  color: var(--color-cinema-cream);
+}
+
+@utility glass-panel-heavy {
+  position: relative;
+  border-radius: var(--radius-glass-lg);
+  background-color: var(--color-glass-mist);
+  -webkit-backdrop-filter: blur(var(--blur-glass-heavy)) saturate(150%);
+  backdrop-filter: blur(var(--blur-glass-heavy)) saturate(150%);
+  box-shadow: inset 0 1px 0 0 var(--color-glass-stroke-light);
+  color: var(--color-cinema-ink);
+}
+
+@utility glass-card-inner {
+  border-radius: calc(var(--radius-glass) - 0.5rem);
+  background-color: rgba(255, 255, 255, 0.55);
+  padding: 1rem 1.125rem;
+}
+
+/* Solid fallback for browsers without backdrop-filter */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass-card,
+  .glass-card-warm,
+  .glass-panel-heavy { background-color: var(--color-cinema-mist); }
+  .glass-card-dark   { background-color: var(--color-cinema-moss); }
+}
+
+/*
+ * Pill button — moss fill, cream label.
+ */
+@utility pill-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-cinema-moss);
+  color: var(--color-cinema-cream);
+  padding: 0.75rem 1.5rem;
+  font-family: var(--font-cinema-body);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  min-height: 44px;
+  transition: transform 180ms ease, background-color 180ms ease;
+}
+
+@utility pill-cta-soft {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-cinema-cream);
+  color: var(--color-cinema-ink);
+  padding: 0.75rem 1.5rem;
+  font-family: var(--font-cinema-body);
+  font-size: 1rem;
+  font-weight: 600;
+  min-height: 44px;
+  transition: transform 180ms ease, background-color 180ms ease;
+}
+
+.pill-cta:hover { background-color: var(--color-cinema-pine); transform: translateY(-1px); }
+.pill-cta-soft:hover { background-color: var(--color-cinema-mint); transform: translateY(-1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pill-cta,
+  .pill-cta-soft {
+    transition: none !important;
+  }
+  .pill-cta:hover,
+  .pill-cta-soft:hover {
+    transform: none !important;
+  }
+}
+
+/*
+ * Headline underline accent — single 1px line, ends 1.5em short of the
+ * line so it reads hand-drawn rather than aligned to a baseline grid.
+ */
+@utility cinema-headline-underline {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.18em;
+}
+.cinema-headline-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: calc(100% - 1.5em);
+  height: 1px;
+  background-color: currentColor;
+  opacity: 0.4;
+}
+
+/*
+ * Scroll-reveal — single-shot fade + rise. JS adds .is-visible.
+ * Reduced-motion: snap to final state instantly.
+ */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
+              transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal-on-scroll.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll,
+  .reveal-on-scroll.is-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* Cinematic hero composition is owned by CinematicHero.tsx (sticky-frame
+ * + absolute photo + gradient + content). No utility class needed here.
+ */

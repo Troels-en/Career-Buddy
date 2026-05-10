@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Send, Sparkles } from "lucide-react";
+
+import { GlassCard } from "@/components/cinema";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/chat")({
@@ -201,119 +203,149 @@ function ChatPage() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-6 py-6 flex flex-col" style={{ minHeight: "calc(100vh - 56px)" }}>
-      <header className="flex items-center justify-between mb-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Career-Buddy chat</h1>
-          <p className="text-sm text-gray-500">
-            Asks your profile, applications, and live job feed.{" "}
-            {shimOnline ? (
-              <span className="text-purple-700">Powered by local Claude (Max sub).</span>
-            ) : (
-              <span>Powered by Gemini 2.5-flash. Run <code className="text-[11px] bg-gray-100 px-1 rounded">python3 scripts/claude_cli_shim.py</code> for Claude.</span>
+    <div className="bg-cinema-mist">
+      <section className="max-w-4xl mx-auto px-6 md:px-12 pt-16 md:pt-24 pb-8">
+        <div className="text-cinema-eyebrow text-cinema-ink-mute mb-4">
+          Talk to Buddy
+        </div>
+        <h1 className="text-cinema-h1 mb-4">
+          <span className="cinema-headline-underline">Ask anything</span> about
+          your search.
+        </h1>
+        <p className="text-cinema-body max-w-2xl">
+          Buddy reads your profile, your applications, and the live job feed
+          before answering — so the advice is grounded, not generic.{" "}
+          {shimOnline ? (
+            <span className="text-cinema-pine font-medium">
+              Powered by local Claude (Max sub).
+            </span>
+          ) : (
+            <>
+              Powered by Gemini 2.5-flash. Run{" "}
+              <code className="text-[0.85rem] bg-cinema-mint/60 text-cinema-ink px-1.5 py-0.5 rounded">
+                python3 scripts/claude_cli_shim.py
+              </code>{" "}
+              for Claude.
+            </>
+          )}
+        </p>
+      </section>
+
+      <section className="max-w-4xl mx-auto px-6 md:px-12 pb-24">
+        <GlassCard variant="cream" padding="lg" className="md:p-8">
+          {quotaActive && (
+            <div className="mb-4 text-base text-cinema-pine bg-cinema-mint/60 border border-cinema-sage/40 rounded-glass px-4 py-3">
+              Gemini free-tier quota hit — resumes around midnight Pacific.
+              Try again later.
+            </div>
+          )}
+
+          <div
+            ref={scrollerRef}
+            className="bg-white/70 border border-cinema-mint rounded-glass p-5 space-y-3 min-h-[40vh] max-h-[60vh] overflow-y-auto"
+          >
+            {messages.length === 0 && !loading && (
+              <div className="space-y-3">
+                <p className="text-cinema-body">A few places to start:</p>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {SUGGESTED.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => send(s)}
+                      disabled={quotaActive}
+                      className="text-left text-base p-3.5 rounded-glass border border-cinema-mint bg-cinema-mist/60 hover:bg-cinema-mint/60 hover:border-cinema-sage text-cinema-ink-soft disabled:opacity-50 transition-colors"
+                    >
+                      <Sparkles className="inline w-4 h-4 mr-1 text-cinema-pine" />
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
-          </p>
-        </div>
-        {messages.length > 0 && (
-          <button onClick={clearChat} className="text-xs text-gray-400 underline hover:text-gray-700">
-            Clear
-          </button>
-        )}
-      </header>
 
-      {quotaActive && (
-        <div className="mb-3 text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
-          Gemini free-tier quota hit — resumes around midnight Pacific. Try again later.
-        </div>
-      )}
-
-      <div
-        ref={scrollerRef}
-        className="flex-1 overflow-y-auto bg-white border rounded-xl p-4 space-y-3"
-      >
-        {messages.length === 0 && !loading && (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-500">Ask anything about your search. Some starters:</p>
-            <div className="grid sm:grid-cols-2 gap-2">
-              {SUGGESTED.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => send(s)}
-                  disabled={quotaActive}
-                  className="text-left text-xs p-3 rounded-lg border bg-gray-50 hover:bg-purple-50 hover:border-purple-200 disabled:opacity-50"
+            {messages.map((m, i) => (
+              <div
+                key={i}
+                className={m.role === "user" ? "flex justify-end" : "flex justify-start"}
+              >
+                <div
+                  className={`max-w-[85%] rounded-glass px-4 py-2.5 text-base whitespace-pre-wrap ${
+                    m.role === "user"
+                      ? "bg-cinema-moss text-cinema-cream"
+                      : "bg-cinema-mint/70 text-cinema-ink"
+                  }`}
                 >
-                  <Sparkles className="inline w-3.5 h-3.5 mr-1 text-purple-500" />
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+                  {m.content}
+                </div>
+              </div>
+            ))}
 
-        {messages.map((m, i) => (
-          <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
-            <div
-              className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
-                m.role === "user"
-                  ? "bg-purple-600 text-white"
-                  : "bg-gray-100 text-gray-900"
-              }`}
-            >
-              {m.content}
-            </div>
-          </div>
-        ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="rounded-glass px-4 py-2.5 bg-cinema-mint/70 text-cinema-ink-soft text-base flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Thinking…
+                </div>
+              </div>
+            )}
 
-        {loading && (
-          <div className="flex justify-start">
-            <div className="rounded-xl px-4 py-2.5 bg-gray-100 text-gray-600 text-sm flex items-center gap-2">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Thinking…
-            </div>
+            {error && (
+              <div className="text-base text-destructive bg-red-50 border border-red-200 rounded-glass px-3 py-2">
+                {error}
+              </div>
+            )}
           </div>
-        )}
 
-        {error && (
-          <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            {error}
-          </div>
-        )}
-      </div>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          send(input);
-        }}
-        className="mt-3 flex gap-2"
-      >
-        <textarea
-          rows={2}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
+          <form
+            onSubmit={(e) => {
               e.preventDefault();
               send(input);
-            }
-          }}
-          placeholder={quotaActive ? "Quota cooldown — try again later" : "Ask Career-Buddy…"}
-          disabled={quotaActive || loading}
-          className="flex-1 border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 disabled:bg-gray-50"
-        />
-        <button
-          type="submit"
-          disabled={!input.trim() || loading || quotaActive}
-          className="px-4 py-2 rounded-lg text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-40"
-          style={{ backgroundColor: "#7c3aed" }}
-        >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          Send
-        </button>
-      </form>
-      <p className="mt-2 text-[10px] text-gray-400">
-        Conversation lives in localStorage. Profile + applications are sent with each request so the
-        model can ground its answers.
-      </p>
-    </main>
+            }}
+            className="mt-4 flex gap-2"
+          >
+            <textarea
+              rows={2}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send(input);
+                }
+              }}
+              placeholder={
+                quotaActive
+                  ? "Quota cooldown — try again later"
+                  : "Ask Buddy anything…"
+              }
+              disabled={quotaActive || loading}
+              className="flex-1 border border-cinema-mint rounded-glass px-4 py-3 text-base bg-white/80 resize-none focus:outline-none focus:ring-2 focus:ring-cinema-sage disabled:bg-cinema-mist/60 text-cinema-ink"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || loading || quotaActive}
+              className="pill-cta disabled:opacity-40 self-stretch"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              Send
+            </button>
+          </form>
+
+          <div className="mt-4 flex items-center justify-between gap-4">
+            <p className="text-cinema-caption">
+              Conversation lives in localStorage. Profile + applications are sent
+              with each request so the model can ground its answers.
+            </p>
+            {messages.length > 0 && (
+              <button
+                onClick={clearChat}
+                className="text-base text-cinema-ink-mute underline hover:text-cinema-ink"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </GlassCard>
+      </section>
+    </div>
   );
 }

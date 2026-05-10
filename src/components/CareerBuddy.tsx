@@ -1386,7 +1386,7 @@ export default function CareerBuddy() {
   const topThreshold = rankedJobs[2]?.fit ?? 0;
 
   return (
-    <div className="min-h-screen bg-white text-[#111827]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div className="min-h-screen bg-cinema-cream text-cinema-ink" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
       <main className="max-w-6xl mx-auto px-6">
         <section id="profile" className="py-8 scroll-mt-16">
           <h1 className="text-3xl font-semibold tracking-tight mb-2">Land your first startup role.</h1>
@@ -1412,7 +1412,7 @@ export default function CareerBuddy() {
                 onClick={buildProfile}
                 disabled={chatLoading}
                 className="px-4 py-2 rounded-lg text-white text-sm font-semibold flex items-center gap-2"
-                style={{ backgroundColor: "#7c3aed" }}
+                style={{ backgroundColor: "#1c2620" }}
               >
                 {chatLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {chatLoading ? "Building your profile…" : "Build profile"}
@@ -1459,7 +1459,7 @@ export default function CareerBuddy() {
                   onClick={analyzeCv}
                   disabled={cvLoading}
                   className="px-4 py-2 rounded-lg text-white text-sm font-semibold flex items-center gap-2"
-                  style={{ backgroundColor: "#7c3aed" }}
+                  style={{ backgroundColor: "#1c2620" }}
                 >
                   {cvLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                   {cvLoading ? "Analyzing CV…" : state.profile.cv_analyzed ? "Re-analyze CV" : "Analyze CV"}
@@ -1532,7 +1532,7 @@ export default function CareerBuddy() {
               >
                 Filters
                 {countActiveFilters(filters) > 0 && (
-                  <span className="ml-1 inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full bg-purple-600 text-white">
+                  <span className="ml-1 inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full bg-cinema-moss text-white">
                     {countActiveFilters(filters)}
                   </span>
                 )}
@@ -1649,7 +1649,7 @@ function ProfileCard({
           <CompletenessMeter completeness={completeness} compact />
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={onEdit} className="text-xs underline" style={{ color: "#7c3aed" }}>
+          <button onClick={onEdit} className="text-xs underline" style={{ color: "#1c2620" }}>
             edit profile
           </button>
           <button onClick={onExpand} className="text-xs text-gray-400 underline">
@@ -1748,7 +1748,7 @@ function CompletenessMeter({
       </div>
       <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
         <div
-          className="h-full rounded-full bg-purple-600 transition-all"
+          className="h-full rounded-full bg-cinema-moss transition-all"
           style={{ width: `${completeness.score}%` }}
         />
       </div>
@@ -1799,7 +1799,7 @@ function ApplicationsTracker({
           <button
             onClick={onAdd}
             className="px-4 py-2 text-sm rounded-lg text-white font-medium hover:shadow-md"
-            style={{ backgroundColor: "#7c3aed" }}
+            style={{ backgroundColor: "#1c2620" }}
           >
             + Add Application
           </button>
@@ -1809,7 +1809,7 @@ function ApplicationsTracker({
       {applications.length === 0 && (
         <div className="text-sm text-gray-500 italic py-6 text-center border border-dashed rounded-lg">
           No applications yet. Click <span className="font-medium text-gray-700">"Add to tracker"</span> on a role card below, or{" "}
-          <button onClick={onAdd} className="text-purple-700 underline">add one manually</button>.
+          <button onClick={onAdd} className="text-cinema-pine underline">add one manually</button>.
         </div>
       )}
 
@@ -1869,12 +1869,12 @@ function ApplicationRow({
   return (
     <>
       <tr
-        className={`border-b transition-colors ease-out group ${app.flash ? "bg-purple-100" : ""}`}
+        className={`border-b transition-colors ease-out group ${app.flash ? "bg-cinema-mint/60" : ""}`}
         style={{ transitionDuration: "400ms" }}
       >
         <td className="py-2 px-2 font-medium">
           {app.url ? (
-            <a href={app.url} target="_blank" rel="noopener noreferrer" className="hover:underline decoration-purple-300">
+            <a href={app.url} target="_blank" rel="noopener noreferrer" className="hover:underline decoration-cinema-sage">
               {app.company}
             </a>
           ) : (
@@ -1886,7 +1886,7 @@ function ApplicationRow({
           <select
             value={app.status}
             onChange={(e) => onUpdate(app.id, { status: e.target.value as Status, last_event: todayISO() })}
-            className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer focus:ring-1 focus:ring-purple-400 outline-none ${statusBadge(app.status)}`}
+            className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer focus:ring-1 focus:ring-cinema-sage outline-none ${statusBadge(app.status)}`}
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -1931,7 +1931,7 @@ function ApplicationRow({
                 setDraftNotes(app.notes ?? "");
                 setNotesOpen((o) => !o);
               }}
-              className={`text-xs px-1.5 py-0.5 rounded ${app.notes ? "text-purple-600" : "text-gray-300 opacity-0 group-hover:opacity-100"} hover:bg-gray-100 transition`}
+              className={`text-xs px-1.5 py-0.5 rounded ${app.notes ? "text-cinema-pine" : "text-gray-300 opacity-0 group-hover:opacity-100"} hover:bg-gray-100 transition`}
               title={app.notes ? "Edit notes" : "Add notes"}
             >
               {app.notes ? "📝" : "+"}
@@ -2010,7 +2010,7 @@ function InsightsPanel({
           </div>
         ))
       )}
-      <button onClick={onRefresh} className="text-xs underline mt-1" style={{ color: "#7c3aed" }}>
+      <button onClick={onRefresh} className="text-xs underline mt-1" style={{ color: "#1c2620" }}>
         Refresh patterns
       </button>
     </div>
@@ -2148,7 +2148,7 @@ function AddAppModal({
             type="submit"
             disabled={loading}
             className="px-4 py-2 text-sm text-white rounded-lg flex items-center gap-2"
-            style={{ backgroundColor: "#7c3aed" }}
+            style={{ backgroundColor: "#1c2620" }}
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             Add
@@ -2266,7 +2266,7 @@ function EditProfileModal({
                     key={cat}
                     type="button"
                     onClick={() => toggleCategory(cat)}
-                    className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-purple-600 border-purple-600 text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"}`}
+                    className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-cinema-moss border-cinema-moss text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"}`}
                   >
                     {cat}
                   </button>
@@ -2283,7 +2283,7 @@ function EditProfileModal({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium">Work history</label>
-              <button type="button" onClick={addPosition} className="text-xs text-purple-700 flex items-center gap-1 hover:underline">
+              <button type="button" onClick={addPosition} className="text-xs text-cinema-pine flex items-center gap-1 hover:underline">
                 <Plus className="w-3.5 h-3.5" /> Add position
               </button>
             </div>
@@ -2307,7 +2307,7 @@ function EditProfileModal({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium">Education</label>
-              <button type="button" onClick={addEducation} className="text-xs text-purple-700 flex items-center gap-1 hover:underline">
+              <button type="button" onClick={addEducation} className="text-xs text-cinema-pine flex items-center gap-1 hover:underline">
                 <Plus className="w-3.5 h-3.5" /> Add education
               </button>
             </div>
@@ -2358,7 +2358,7 @@ function EditProfileModal({
 
         <div className="border-t px-6 py-4 flex items-center justify-end gap-2 bg-white rounded-b-xl sticky bottom-0">
           <button onClick={onClose} className="px-4 py-2 text-sm border rounded-lg">Cancel</button>
-          <button onClick={save} className="px-4 py-2 text-sm text-white rounded-lg" style={{ backgroundColor: "#7c3aed" }}>
+          <button onClick={save} className="px-4 py-2 text-sm text-white rounded-lg" style={{ backgroundColor: "#1c2620" }}>
             Save profile
           </button>
         </div>
@@ -2394,7 +2394,7 @@ function BulletEditor({
         <button
           type="button"
           onClick={() => onChange([...items, ""])}
-          className="text-xs text-purple-700 flex items-center gap-1 hover:underline"
+          className="text-xs text-cinema-pine flex items-center gap-1 hover:underline"
         >
           <Plus className="w-3.5 h-3.5" /> Add
         </button>
@@ -2475,7 +2475,7 @@ function PositionEditor({
           <button
             type="button"
             onClick={() => onChange({ ...position, bullets: [...position.bullets, ""] })}
-            className="text-xs text-purple-700 flex items-center gap-1 hover:underline"
+            className="text-xs text-cinema-pine flex items-center gap-1 hover:underline"
           >
             <Plus className="w-3.5 h-3.5" /> Add bullet
           </button>
@@ -2517,7 +2517,7 @@ function JobCard({
 
   return (
     <div
-      className={`relative bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition ${isTop ? "ring-2 ring-purple-500/60" : ""}`}
+      className={`relative bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition ${isTop ? "ring-2 ring-cinema-sage/60" : ""}`}
       onMouseEnter={() => setShowSnippet(true)}
       onMouseLeave={() => setShowSnippet(false)}
     >
@@ -2536,7 +2536,7 @@ function JobCard({
         href={job.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block no-underline text-[#111827] hover:underline decoration-purple-300"
+        className="block no-underline text-[#111827] hover:underline decoration-cinema-sage"
       >
         <div className="font-semibold text-base pr-10">{job.company}</div>
         <div className="text-sm">{job.role}</div>
@@ -2545,7 +2545,7 @@ function JobCard({
       <div className="mt-2 flex items-center gap-1.5 flex-wrap text-[10px]">
         <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase tracking-wide">{job.ats_source}</span>
         {job.role_category && job.role_category !== "other" && (
-          <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">{job.role_category}</span>
+          <span className="px-2 py-0.5 rounded-full bg-cinema-mint/40 text-cinema-pine">{job.role_category}</span>
         )}
         {job.level && (
           <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">{job.level}</span>
@@ -2583,7 +2583,7 @@ function JobCard({
         <button
           onClick={onAdd}
           className="text-xs px-3 py-1 border rounded-lg"
-          style={{ borderColor: "#7c3aed", color: "#7c3aed" }}
+          style={{ borderColor: "#1c2620", color: "#1c2620" }}
         >
           Add to tracker
         </button>
@@ -2601,7 +2601,7 @@ function JobCard({
               setExpanded(true);
             }}
             disabled={matchDisabled}
-            className="text-xs px-3 py-1 rounded-lg flex items-center gap-1 bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-xs px-3 py-1 rounded-lg flex items-center gap-1 bg-cinema-moss text-white hover:bg-cinema-pine disabled:opacity-50 disabled:cursor-not-allowed"
             title={matchDisabled ? "AI quota for today reached" : "Run an AI fit analysis"}
           >
             <Sparkles className="w-3.5 h-3.5" />
@@ -2611,7 +2611,7 @@ function JobCard({
         {(status === "ready" || status === "loading" || status === "error") && (
           <button
             onClick={() => setExpanded((e) => !e)}
-            className="text-xs px-3 py-1 rounded-lg flex items-center gap-1 border border-purple-200 text-purple-700 hover:bg-purple-50"
+            className="text-xs px-3 py-1 rounded-lg flex items-center gap-1 border border-cinema-sage/50 text-cinema-pine hover:bg-cinema-mint/40"
           >
             <Sparkles className="w-3.5 h-3.5" />
             {status === "loading" ? "Analyzing…" : status === "error" ? "Match failed — view" : `AI score ${result!.score.toFixed(1)}`}
@@ -2754,7 +2754,7 @@ function FilterBar({
                 key={cat}
                 type="button"
                 onClick={() => onChange({ ...filters, roleCats: toggleArr(filters.roleCats, cat) })}
-                className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-purple-600 border-purple-600 text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
+                className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-cinema-moss border-cinema-moss text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
               >
                 {cat} <span className="opacity-60">{count}</span>
               </button>
@@ -2821,7 +2821,7 @@ function FilterBar({
                 key={lvl}
                 type="button"
                 onClick={() => onChange({ ...filters, levels: (toggleArr(filters.levels as string[], lvl) as JobLevel[]) })}
-                className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-purple-600 border-purple-600 text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
+                className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-cinema-moss border-cinema-moss text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
               >
                 {lvl} <span className="opacity-60">{count}</span>
               </button>
@@ -2840,7 +2840,7 @@ function FilterBar({
                 key={country}
                 type="button"
                 onClick={() => onChange({ ...filters, countries: toggleArr(filters.countries, country) })}
-                className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-purple-600 border-purple-600 text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
+                className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-cinema-moss border-cinema-moss text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
               >
                 {country} <span className="opacity-60">{count}</span>
               </button>
@@ -2878,7 +2878,7 @@ function FilterBar({
                 key={src}
                 type="button"
                 onClick={() => onChange({ ...filters, atsSources: toggleArr(filters.atsSources, src) })}
-                className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-purple-600 border-purple-600 text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
+                className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-cinema-moss border-cinema-moss text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
               >
                 {src} <span className="opacity-60">{count}</span>
               </button>
@@ -2913,7 +2913,7 @@ function FilterBar({
                   key={l}
                   type="button"
                   onClick={() => onChange({ ...filters, languages: toggleArr(filters.languages, l) })}
-                  className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-purple-600 border-purple-600 text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
+                  className={`text-xs px-2.5 py-1 rounded-full border ${on ? "bg-cinema-moss border-cinema-moss text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
                 >
                   {l}
                 </button>
@@ -2928,7 +2928,7 @@ function FilterBar({
           {presets.length > 0 && <span className="text-xs text-gray-500">Saved:</span>}
           {presets.map((p) => (
             <span key={p.name} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-white border">
-              <button onClick={() => onApplyPreset(p)} className="text-purple-700 hover:underline">{p.name}</button>
+              <button onClick={() => onApplyPreset(p)} className="text-cinema-pine hover:underline">{p.name}</button>
               <button
                 onClick={() => onDeletePreset(p.name)}
                 className="text-gray-300 hover:text-red-600"
@@ -2938,7 +2938,7 @@ function FilterBar({
               </button>
             </span>
           ))}
-          <button onClick={onSavePreset} className="text-xs px-2 py-1 rounded-full border border-purple-300 text-purple-700 hover:bg-purple-50">
+          <button onClick={onSavePreset} className="text-xs px-2 py-1 rounded-full border border-cinema-sage text-cinema-pine hover:bg-cinema-mint/40">
             + Save as preset
           </button>
         </div>
@@ -3036,7 +3036,7 @@ function DraftModal({
             <button
               key={k}
               onClick={() => setActiveKind(k)}
-              className={`text-xs px-2.5 py-1 rounded-full border ${activeKind === k ? "bg-purple-600 border-purple-600 text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
+              className={`text-xs px-2.5 py-1 rounded-full border ${activeKind === k ? "bg-cinema-moss border-cinema-moss text-white" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
             >
               {DRAFT_KIND_LABEL[k]}
             </button>
@@ -3054,7 +3054,7 @@ function DraftModal({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-medium text-gray-600">Subject</label>
-                  <button onClick={() => copy("subject")} className="text-xs text-purple-700 hover:underline">
+                  <button onClick={() => copy("subject")} className="text-xs text-cinema-pine hover:underline">
                     {copied === "subject" ? "copied" : "copy"}
                   </button>
                 </div>
@@ -3063,7 +3063,7 @@ function DraftModal({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-medium text-gray-600">Body</label>
-                  <button onClick={() => copy("body")} className="text-xs text-purple-700 hover:underline">
+                  <button onClick={() => copy("body")} className="text-xs text-cinema-pine hover:underline">
                     {copied === "body" ? "copied" : "copy"}
                   </button>
                 </div>
@@ -3085,7 +3085,7 @@ function DraftModal({
               onClick={() => copy("all")}
               disabled={!draft}
               className="px-4 py-2 text-sm text-white rounded-lg disabled:opacity-40"
-              style={{ backgroundColor: "#7c3aed" }}
+              style={{ backgroundColor: "#1c2620" }}
             >
               {copied === "all" ? "Copied" : "Copy subject + body"}
             </button>
