@@ -388,10 +388,13 @@ def main() -> int:
                         continue
                     cur.execute(
                         """
-                        update jobs set role_category = %s
+                        update jobs
+                           set role_category = %s,
+                               classified_at = now(),
+                               classified_source = %s
                          where id = %s and role_category is null;
                         """,
-                        (cat, job_id),
+                        (cat, CLASSIFIER_NAME, job_id),
                     )
                     if cur.rowcount == 0:
                         skipped_race += 1
