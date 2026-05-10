@@ -35,7 +35,10 @@ class PersonioAdapter:
         return match.group("slug").lower() if match else None
 
     async def fetch(self, slug: str, client: RateLimitedClient) -> list[dict[str, Any]]:
-        for url_template in (PERSONIO_API_DE, PERSONIO_API_COM):
+        for url_template, tld in (
+            (PERSONIO_API_DE, "de"),
+            (PERSONIO_API_COM, "com"),
+        ):
             url = url_template.format(slug=slug)
             try:
                 resp = await client.get(url)
@@ -49,7 +52,12 @@ class PersonioAdapter:
                 continue
             positions: list[dict[str, Any]] = []
             for position in root.findall("position"):
-                positions.append(_position_to_dict(position))
+                row = _position_to_dict(position)
+                # Stash slug + tld so normalize() can construct the deep
+                # job-detail URL — the XML feed doesn't include one.
+                row["_personio_slug"] = slug
+                row["_personio_tld"] = tld
+                positions.append(row)
             if positions:
                 return positions
         return []
@@ -60,13 +68,20 @@ class PersonioAdapter:
         company_name: str,
         company_domain: str,
     ) -> dict[str, Any]:
+        url = str(raw.get("url") or "")
+        if not url:
+            slug = raw.get("_personio_slug")
+            tld = raw.get("_personio_tld") or "de"
+            job_id = raw.get("id")
+            if slug and job_id:
+                url = f"https://{slug}.jobs.personio.{tld}/job/{job_id}"
         return {
             "company_name": company_name,
             "company_domain": company_domain,
             "role_title": str(raw.get("name", "")).strip(),
             "location": raw.get("office") or None,
             "employment_type": raw.get("employmentType") or None,
-            "url": str(raw.get("url", "")),
+            "url": url,
             "description": raw.get("jobDescriptions") or None,
             "posted_date": _parse_iso_date(raw.get("createdAt")),
             "ats_source": self.source.value,

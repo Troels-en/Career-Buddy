@@ -152,6 +152,70 @@ def test_workable_normalize_returns_dict_with_required_keys() -> None:
     CanonicalJob.model_validate(out)
 
 
+def test_workable_normalize_constructs_url_from_shortcode_and_slug() -> None:
+    """v3 jobs payload omits url; normalize constructs from slug + shortcode."""
+    raw = {
+        "id": 5537738,
+        "shortcode": "922D2C6549",
+        "title": "Cloud ML DevRel Engineer",
+        "remote": True,
+        "location": {"city": "Paris", "country": "France"},
+        "published": "2026-02-12T00:00:00.000Z",
+        "_workable_slug": "huggingface",
+    }
+    out = WorkableAdapter().normalize(raw, "Hugging Face", "huggingface.co")
+    assert out["url"] == "https://apply.workable.com/huggingface/j/922D2C6549/"
+    CanonicalJob.model_validate(out)
+
+
+def test_personio_normalize_constructs_url_from_id_and_slug() -> None:
+    """Personio XML feed omits per-job URL; normalize constructs from slug + id."""
+    from career_buddy_scraper.ats.personio import PersonioAdapter
+
+    raw = {
+        "id": "160959",
+        "name": "Frontend Performance Engineer",
+        "office": "Berlin",
+        "employmentType": "permanent",
+        "createdAt": "2019-11-28T18:18:37+00:00",
+        "_personio_slug": "pitch",
+        "_personio_tld": "de",
+    }
+    out = PersonioAdapter().normalize(raw, "Pitch", "pitch.com")
+    assert out["url"] == "https://pitch.jobs.personio.de/job/160959"
+    CanonicalJob.model_validate(out)
+
+
+def test_workable_fetch_stashes_account_slug_for_normalize() -> None:
+    """fetch() must inject _workable_slug into every result dict."""
+    import asyncio
+
+    async def run() -> list[dict[str, object]]:
+        async with respx.mock(assert_all_called=False) as router:
+            router.post(
+                "https://apply.workable.com/api/v3/accounts/myco/jobs"
+            ).respond(
+                200,
+                json={
+                    "results": [
+                        {"id": 1, "shortcode": "AAA", "title": "x"},
+                        {"id": 2, "shortcode": "BBB", "title": "y"},
+                    ],
+                    "nextPage": None,
+                },
+            )
+            async with httpx.AsyncClient() as inner:
+                client = RateLimitedClient(
+                    bucket=TokenBucket(100, 60.0),
+                    per_host_delay_s=0.0,
+                    client=inner,
+                )
+                return await WorkableAdapter().fetch("myco", client)
+
+    rows = asyncio.run(run())
+    assert all(r["_workable_slug"] == "myco" for r in rows)
+
+
 def test_invalid_raw_round_trips_to_validation_error_not_crash() -> None:
     """A raw with empty url normalises to a dict; Pydantic raises on validate."""
     bad = {"title": "", "absolute_url": "", "location": None, "updated_at": None}

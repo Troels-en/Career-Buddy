@@ -52,6 +52,11 @@ class WorkableAdapter:
             payload = cast(dict[str, Any], resp.json())
             page_results = payload.get("results", [])
             if isinstance(page_results, list):
+                # Stash account slug so normalize() can construct the
+                # deep job-detail URL — the v3 jobs payload omits it.
+                for row in page_results:
+                    if isinstance(row, dict):
+                        row["_workable_slug"] = slug
                 results.extend(page_results)
             new_token = payload.get("nextPage")
             if not new_token or not isinstance(new_token, str):
@@ -72,6 +77,11 @@ class WorkableAdapter:
     ) -> dict[str, Any]:
         title = str(raw.get("title", "")).strip()
         url = str(raw.get("url") or raw.get("application_url") or "")
+        if not url:
+            slug = raw.get("_workable_slug")
+            shortcode = raw.get("shortcode")
+            if slug and shortcode:
+                url = f"https://apply.workable.com/{slug}/j/{shortcode}/"
         location_obj = raw.get("location")
         location = ""
         if isinstance(location_obj, dict):
