@@ -16,6 +16,13 @@ import {
   tokenize,
 } from "@/lib/job-fit";
 import {
+  applicationToRow,
+  cleanSnippet,
+  profileCompleteness,
+  profileSignature,
+  safeIsoDate,
+} from "@/lib/jobs-helpers";
+import {
   DEFAULT_FILTERS,
   applyFilters,
   countActiveFilters,
@@ -304,72 +311,9 @@ function persistPresets(presets: FilterPreset[]) {
 // serializeFilters / parseFiltersFromHash / sortJobs / countActiveFilters
 // moved to src/lib/job-filters.ts (imported above).
 
-function profileCompleteness(profile: Profile): { score: number; done: number; total: number } {
-  const checks = [
-    profile.name.trim(),
-    profile.headline.trim(),
-    profile.target_role.trim(),
-    profile.target_geo.trim(),
-    profile.background.trim(),
-    profile.strengths.length > 0,
-    profile.target_role_categories.length > 0,
-    profile.location_preferences.length > 0,
-    profile.cv_analyzed,
-    profile.work_history.length > 0,
-    profile.education.length > 0,
-  ];
-  const done = checks.filter(Boolean).length;
-  return { score: Math.round((done / checks.length) * 100), done, total: checks.length };
-}
-
-function cleanSnippet(text: string | null): string {
-  if (!text) return "";
-  return text.replace(/\s+/g, " ").trim().slice(0, 300);
-}
-
+// profileCompleteness / cleanSnippet / applicationToRow / safeIsoDate /
+// profileSignature moved to src/lib/jobs-helpers.ts (imported above).
 // applyFilters moved to src/lib/job-filters.ts (imported above).
-
-function applicationToRow(a: Application): Record<string, unknown> {
-  return {
-    client_id: a.id,
-    company: a.company,
-    role: a.role,
-    status: a.status,
-    next_action: a.next_action,
-    fit_score: a.fit,
-    url: a.url ?? null,
-    notes: a.notes ?? null,
-    last_event_date: safeIsoDate(a.last_event),
-  };
-}
-
-function safeIsoDate(s: string | undefined): string | null {
-  if (!s) return null;
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s).toISOString();
-  return null;
-}
-
-function profileSignature(p: Profile): string {
-  // Stable signature: changes when fitness-affecting fields change.
-  const parts = [
-    p.target_role,
-    p.target_geo,
-    p.background,
-    p.headline,
-    [...p.strengths].sort().join("|"),
-    [...p.target_role_categories].sort().join("|"),
-    [...p.location_preferences].sort().join("|"),
-    p.work_history.map((w) => `${w.company}-${w.role}-${w.bullets.join(";")}`).join("||"),
-  ];
-  // Cheap deterministic hash (FNV-1a-ish, sufficient for cache-key collision avoidance).
-  const blob = parts.join("\n");
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < blob.length; i++) {
-    h ^= blob.charCodeAt(i);
-    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
-  }
-  return h.toString(16);
-}
 
 const MATCH_CACHE_KEY = "career-buddy-matches-v1";
 const MATCH_QUOTA_KEY = "career-buddy-match-quota-v1";
