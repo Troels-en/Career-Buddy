@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 
+import { getCurrentUserId } from "./auth";
+
 /**
  * Cinema theme registry — single source of truth for which themes
  * exist + which photography goes with each. Keep in sync with
@@ -145,12 +147,10 @@ type UserTrackRow = {
  */
 export async function fetchPersistedTheme(): Promise<ThemeName | null> {
   try {
-    const { data, error } = await supabase
-      .from("user_tracks" as never)
-      .select("track_primary")
-      .is("user_id", null)
-      .limit(1)
-      .maybeSingle();
+    const userId = await getCurrentUserId();
+    const base = supabase.from("user_tracks" as never).select("track_primary");
+    const scoped = userId ? base.eq("user_id", userId) : base.is("user_id", null);
+    const { data, error } = await scoped.limit(1).maybeSingle();
     if (error || !data) return null;
     const row = data as Pick<UserTrackRow, "track_primary">;
     return isTheme(row.track_primary) ? row.track_primary : null;
@@ -171,8 +171,12 @@ export async function persistTheme(
   trackSecondary: string[] = [],
 ): Promise<void> {
   try {
+    // Pre-migration / anonymous: user_id stays null (the legacy
+    // COALESCE unique index still owns the row). Post-migration /
+    // signed-in: user_id = auth.uid() → real per-user unique index.
+    const userId = await getCurrentUserId();
     const row: UserTrackRow = {
-      user_id: null,
+      user_id: userId,
       track_primary: theme,
       track_secondary: trackSecondary,
       updated_at: new Date().toISOString(),

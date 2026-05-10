@@ -8,21 +8,25 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const mockInsert = vi.fn().mockResolvedValue({ data: null, error: null });
 const mockLimit = vi.fn();
+const mockGetUser = vi.fn();
 
-vi.mock("@/integrations/supabase/client", () => ({
-  supabase: {
-    from: () => ({
-      insert: (row: unknown) => mockInsert(row),
-      select: () => ({
-        is: () => ({
-          order: () => ({
-            limit: (n: number) => mockLimit(n),
-          }),
+vi.mock("@/integrations/supabase/client", () => {
+  const orderLimit = () => ({
+    order: () => ({ limit: (n: number) => mockLimit(n) }),
+  });
+  return {
+    supabase: {
+      auth: { getUser: () => mockGetUser() },
+      from: () => ({
+        insert: (row: unknown) => mockInsert(row),
+        select: () => ({
+          is: () => orderLimit(),
+          eq: () => orderLimit(),
         }),
       }),
-    }),
-  },
-}));
+    },
+  };
+});
 
 import {
   fetchRecentContextNotes,
@@ -33,6 +37,10 @@ import {
 beforeEach(() => {
   mockInsert.mockReset().mockResolvedValue({ data: null, error: null });
   mockLimit.mockReset();
+  // Default: signed-in (most realistic post-migration state).
+  mockGetUser
+    .mockReset()
+    .mockResolvedValue({ data: { user: { id: "u-signed-in" } }, error: null });
 });
 
 afterEach(() => {
@@ -44,16 +52,23 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("saveContextNote", () => {
-  test("inserts a trimmed note with default source=buddy and empty metadata", async () => {
+  test("inserts a trimmed note with default source=buddy and user_id from auth", async () => {
     const ok = await saveContextNote("  user wants Berlin remote roles  ");
     expect(ok).toBe(true);
     expect(mockInsert).toHaveBeenCalledTimes(1);
     expect(mockInsert).toHaveBeenCalledWith({
-      user_id: null,
+      user_id: "u-signed-in",
       note_text: "user wants Berlin remote roles",
       source: "buddy",
       metadata: {},
     });
+  });
+
+  test("anonymous: returns false, no insert", async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: null });
+    const ok = await saveContextNote("anonymous-note");
+    expect(ok).toBe(false);
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 
   test("accepts the four valid sources verbatim", async () => {
@@ -139,6 +154,13 @@ describe("fetchRecentContextNotes", () => {
     expect(mockLimit).toHaveBeenLastCalledWith(1);
     await fetchRecentContextNotes(99999);
     expect(mockLimit).toHaveBeenLastCalledWith(500);
+  });
+
+  test("anonymous: returns [] without hitting the table", async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: null });
+    const notes = await fetchRecentContextNotes();
+    expect(notes).toEqual([]);
+    expect(mockLimit).not.toHaveBeenCalled();
   });
 
   test("returns [] when Supabase errors", async () => {

@@ -18,6 +18,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+import { getCurrentUserId } from "./auth";
+
 export type ContextNoteSource = "buddy" | "profile" | "cv" | "manual";
 
 const VALID_SOURCES: ReadonlySet<ContextNoteSource> = new Set([
@@ -36,7 +38,7 @@ export type ContextNote = {
 };
 
 type InsertRow = {
-  user_id: string | null;
+  user_id: string;
   note_text: string;
   source: ContextNoteSource;
   metadata: Record<string, unknown>;
@@ -60,9 +62,14 @@ export async function saveContextNote(
 ): Promise<boolean> {
   const trimmed = noteText.trim();
   if (!trimmed) return false;
+  // Anonymous-mode skip: notes aren't useful without a user to
+  // attribute them to + no per-user fetch path exists for null
+  // user_id post-migration anyway.
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
   const safeSource = VALID_SOURCES.has(source) ? source : "buddy";
   const row: InsertRow = {
-    user_id: null,
+    user_id: userId,
     note_text: trimmed,
     source: safeSource,
     metadata: sanitizeMetadata(metadata),
@@ -86,10 +93,15 @@ export async function fetchRecentContextNotes(
   limit = 20,
 ): Promise<ContextNote[]> {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) return [];
+    // Post-migration RLS scopes the read to auth.uid() automatically;
+    // the explicit .eq() is belt-and-braces for pre-migration single-
+    // user-mode-with-real-uid edge cases.
     const { data, error } = await supabase
       .from("user_context_notes" as never)
       .select("id,note_text,source,metadata,created_at")
-      .is("user_id", null)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(Math.max(1, Math.min(500, limit)));
     if (error || !data) return [];

@@ -2,20 +2,25 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const mockUpsert = vi.fn().mockResolvedValue({ data: null, error: null });
 const mockMaybeSingle = vi.fn();
-vi.mock("@/integrations/supabase/client", () => ({
-  supabase: {
-    from: () => ({
-      upsert: (...args: unknown[]) => mockUpsert(...args),
-      select: () => ({
-        is: () => ({
-          limit: () => ({
-            maybeSingle: () => mockMaybeSingle(),
-          }),
+const mockGetUser = vi.fn();
+
+vi.mock("@/integrations/supabase/client", () => {
+  const limitMaybeSingle = () => ({
+    limit: () => ({ maybeSingle: () => mockMaybeSingle() }),
+  });
+  return {
+    supabase: {
+      auth: { getUser: () => mockGetUser() },
+      from: () => ({
+        upsert: (...args: unknown[]) => mockUpsert(...args),
+        select: () => ({
+          is: () => limitMaybeSingle(),
+          eq: () => limitMaybeSingle(),
         }),
       }),
-    }),
-  },
-}));
+    },
+  };
+});
 
 import {
   TRACKS_KEY,
@@ -257,6 +262,10 @@ describe("setProfileFromAnalysis", () => {
   beforeEach(() => {
     mockUpsert.mockClear().mockResolvedValue({ data: null, error: null });
     mockMaybeSingle.mockReset();
+    // Default: signed-in (most realistic post-migration state).
+    mockGetUser
+      .mockReset()
+      .mockResolvedValue({ data: { user: { id: "u-signed-in" } }, error: null });
   });
 
   test("merges analysis into localStorage and stamps updated_at", async () => {
@@ -268,18 +277,26 @@ describe("setProfileFromAnalysis", () => {
     expect(typeof state.profile?.updated_at).toBe("string");
   });
 
-  test("upserts the row to user_profile with user_id null", async () => {
+  test("signed-in: upserts the row with user_id = auth.uid()", async () => {
     await setProfileFromAnalysis(sampleAnalysis, "cv.pdf");
     expect(mockUpsert).toHaveBeenCalledTimes(1);
     const [row, opts] = mockUpsert.mock.calls[0];
     expect(opts).toEqual({ onConflict: "user_id", ignoreDuplicates: false });
-    expect(row.user_id).toBeNull();
+    expect(row.user_id).toBe("u-signed-in");
     expect(row.name).toBe("Troels Enigk");
     expect(row.headline).toBe("CLSBE Master, ex-BDR");
     expect(row.skills).toEqual(sampleAnalysis.skills);
     expect(row.target_role_categories).toEqual(["bizops", "strategy"]);
     expect(row.location_preferences).toEqual(["Berlin"]);
     expect(typeof row.updated_at).toBe("string");
+  });
+
+  test("anonymous: skips Supabase upsert, localStorage still written", async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: null });
+    await setProfileFromAnalysis(sampleAnalysis, "cv.pdf");
+    expect(mockUpsert).not.toHaveBeenCalled();
+    const state = loadCareerBuddyState();
+    expect(state.profile?.name).toBe("Troels Enigk");
   });
 
   test("Supabase failure does not throw; localStorage still saved", async () => {
@@ -296,6 +313,9 @@ describe("fetchPersistedProfile", () => {
   beforeEach(() => {
     mockUpsert.mockClear();
     mockMaybeSingle.mockReset();
+    mockGetUser
+      .mockReset()
+      .mockResolvedValue({ data: { user: null }, error: null });
   });
 
   test("returns row data on success", async () => {
@@ -328,6 +348,9 @@ describe("initProfileFromSupabase", () => {
   beforeEach(() => {
     mockUpsert.mockClear();
     mockMaybeSingle.mockReset();
+    mockGetUser
+      .mockReset()
+      .mockResolvedValue({ data: { user: null }, error: null });
   });
 
   afterEach(() => {

@@ -26,6 +26,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+import { getCurrentUserId } from "./auth";
 import {
   loadCareerBuddyState,
   mergeAnalysisIntoState,
@@ -190,7 +191,7 @@ type UserProfileRow = {
   updated_at: string;
 };
 
-function profileToRow(profile: Profile): UserProfileRow {
+function profileToRow(profile: Profile, userId: string | null): UserProfileRow {
   const arr = (v: unknown): string[] =>
     Array.isArray(v) ? (v.filter((x) => typeof x === "string") as string[]) : [];
   const str = (v: unknown): string | null =>
@@ -198,7 +199,7 @@ function profileToRow(profile: Profile): UserProfileRow {
   const num = (v: unknown): number | null =>
     typeof v === "number" && Number.isFinite(v) ? v : null;
   return {
-    user_id: null,
+    user_id: userId,
     name: str(profile.name),
     headline: str(profile.headline),
     summary: null,
@@ -241,8 +242,14 @@ export async function setProfileFromAnalysis(
   };
   saveCareerBuddyState(next);
 
+  // Anonymous-mode-aware: skip Supabase upsert when no session.
+  // localStorage remains the canonical store; once the user signs
+  // in, migrateLocalStorageToSupabase() backfills.
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+
   try {
-    const row = profileToRow(next.profile as Profile);
+    const row = profileToRow(next.profile as Profile, userId);
     row.updated_at = updatedAt;
     await supabase
       .from("user_profile" as never)
@@ -259,14 +266,18 @@ export async function setProfileFromAnalysis(
  */
 export async function fetchPersistedProfile(): Promise<UserProfileRow | null> {
   try {
-    const { data, error } = await supabase
+    const userId = await getCurrentUserId();
+    // Pre-migration / anonymous: query the legacy single-user row
+    // (user_id IS NULL). Post-migration / signed-in: query the
+    // current user's row (auth.uid() — RLS-scoped, so no `.is`
+    // filter needed).
+    const query = supabase
       .from("user_profile" as never)
       .select(
         "user_id,name,headline,summary,skills,work_history,education,target_role,target_geo,target_role_categories,location_preferences,cv_filename,cv_summary,cv_fit_score,updated_at",
-      )
-      .is("user_id", null)
-      .limit(1)
-      .maybeSingle();
+      );
+    const scoped = userId ? query.eq("user_id", userId) : query.is("user_id", null);
+    const { data, error } = await scoped.limit(1).maybeSingle();
     if (error || !data) return null;
     return data as unknown as UserProfileRow;
   } catch {
