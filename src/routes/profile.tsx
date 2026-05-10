@@ -274,19 +274,31 @@ function ProfilePage() {
               ) : (
                 <ul className="flex flex-wrap gap-2">
                   {skills.map((s, i) => (
-                    <li
-                      key={`${s.name}-${i}`}
-                      className="inline-flex items-center gap-2 rounded-full border border-cinema-mint bg-white px-3 py-1.5 text-base text-cinema-ink"
-                    >
-                      <span className="font-medium">{s.name}</span>
-                      {s.level && (
-                        <span className="text-cinema-ink-mute text-cinema-caption uppercase tracking-wider">
-                          {s.level}
-                        </span>
-                      )}
-                      {typeof s.years === "number" && s.years > 0 && (
-                        <span className="text-cinema-ink-mute">· {s.years}y</span>
-                      )}
+                    <li key={`${s.name}-${i}`}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent("open-buddy", {
+                              detail: {
+                                prefill: `Tell me about my ${s.name} experience — what projects on my CV show real depth, and what's the next stretch?`,
+                              },
+                            }),
+                          )
+                        }
+                        title={`Probe ${s.name} with Buddy`}
+                        className="inline-flex items-center gap-2 rounded-full border border-cinema-mint bg-white px-3 py-1.5 text-base text-cinema-ink hover:bg-cinema-mint/40 transition-colors"
+                      >
+                        <span className="font-medium">{s.name}</span>
+                        {s.level && (
+                          <span className="text-cinema-ink-mute text-cinema-caption uppercase tracking-wider">
+                            {s.level}
+                          </span>
+                        )}
+                        {typeof s.years === "number" && s.years > 0 && (
+                          <span className="text-cinema-ink-mute">· {s.years}y</span>
+                        )}
+                      </button>
                     </li>
                   ))}
                 </ul>

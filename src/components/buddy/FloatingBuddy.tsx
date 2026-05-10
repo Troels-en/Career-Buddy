@@ -77,8 +77,23 @@ export function FloatingBuddy() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
+    // Phase 6 skill-probe entry point: any component on the page can
+    // dispatch `window.dispatchEvent(new CustomEvent("open-buddy",
+    // { detail: { prefill: "…" }}))` to open the panel pre-seeded
+    // with a follow-up prompt. Used by /profile Section 03 skill
+    // chips to launch "Tell me about <skill>" conversations without
+    // routing the user away from the profile editor.
+    const onOpenBuddy = (e: Event) => {
+      const detail = (e as CustomEvent<{ prefill?: string }>).detail;
+      setOpen(true);
+      if (detail?.prefill) setInput(detail.prefill);
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("open-buddy", onOpenBuddy as EventListener);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("open-buddy", onOpenBuddy as EventListener);
+    };
   }, []);
 
   const quotaActive = useMemo(
