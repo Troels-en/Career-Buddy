@@ -45,9 +45,18 @@ Output am ende: 6 env vars die du in Supabase Dashboard pastest +
 2. Top: **Create Credentials** → OAuth client ID
 3. Application type: **Web application**
 4. Name: `Career-Buddy Web`
-5. Authorized redirect URIs → **Add URI** (zwei stück):
+5. Authorized redirect URIs → **Add URI** (drei stück):
    - `https://career-buddy.enigkt1.workers.dev/email-oauth-callback`
    - `http://localhost:8788/email-oauth-callback`
+   - `https://gxnpfbzfqgbhnyqunuwf.supabase.co/auth/v1/callback`
+     *(Supabase Auth Google-sign-in provider callback. Without this
+     `/login` → "Continue with Google" returns Error 400
+     redirect_uri_mismatch. Project ref hardcoded — change if you
+     re-link to a different Supabase project.)*
+5b. Authorized JavaScript origins → **Add URI** (drei stück):
+   - `https://career-buddy.enigkt1.workers.dev`
+   - `http://localhost:5173` *(vite dev)*
+   - `http://localhost:8788` *(wrangler dev)*
 6. → Create
 7. Modal mit credentials erscheint → kopier dir:
    - **Client ID** (endet auf `.apps.googleusercontent.com`)
@@ -193,7 +202,8 @@ Macht dass alle edge functions anon-calls rejecten.
 
 | Error | Cause | Fix |
 |---|---|---|
-| "redirect_uri_mismatch" Google | URI in 1.4 nicht exakt gleich wie env var | Check trailing slash, http vs https |
+| "redirect_uri_mismatch" Google (inbox-connect) | URI in 1.4 nicht exakt gleich wie env var | Check trailing slash, http vs https |
+| "redirect_uri_mismatch" Google (login / sign-in) | Supabase Auth callback `https://<ref>.supabase.co/auth/v1/callback` fehlt in 1.4 Authorized redirect URIs | Add it, save, retry |
 | "AADSTS50011 redirect URI" Azure | Same issue Azure-side | Check 2.1 / 2.3 redirect URIs |
 | "did not return refresh_token" | User hat schon mal granted | Revoke at https://myaccount.google.com/permissions + retry |
 | Edge function 401 | OAUTH_STATE_SECRET missing | Set env var + redeploy function |
