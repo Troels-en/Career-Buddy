@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Green Flash",
+    "domain": "green-flash.de",
+    "careers_url": "https://greenflash.jobs.personio.de",
+    "geography": null,
+    "stage_focus": "seed",
+    "sector_tags": [
+      "bryck"
+    ],
+    "tier": 2,
+    "sources": [
+      "session-d-gap3-bryck"
+    ],
+    "notes": "bryck portfolio; personio/greenflash verified 20 jobs (probe 2026-05-11)"
+  },
+  {
+    "name": "Taskrunner",
+    "domain": "taskrunner.de",
+    "careers_url": "https://taskrunner.jobs.personio.de",
+    "geography": null,
+    "stage_focus": "seed",
+    "sector_tags": [
+      "bryck"
+    ],
+    "tier": 2,
+    "sources": [
+      "session-d-gap3-bryck"
+    ],
+    "notes": "bryck portfolio; personio/taskrunner verified 3 jobs (probe 2026-05-11)"
+  },
+  {
+    "name": "Othermo",
+    "domain": "othermo.de",
+    "careers_url": "https://othermo.jobs.personio.de",
+    "geography": null,
+    "stage_focus": "seed",
+    "sector_tags": [
+      "bryck"
+    ],
+    "tier": 2,
+    "sources": [
+      "session-d-gap3-bryck"
+    ],
+    "notes": "bryck portfolio; personio/othermo verified 8 jobs (probe 2026-05-11)"
+  }
+]
