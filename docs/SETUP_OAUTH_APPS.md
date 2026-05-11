@@ -119,6 +119,37 @@ Speicher beide:
 
 ---
 
+## Step 2.6 — Supabase Auth URL Configuration (CRITICAL)
+
+Magic-link + Google sign-in redirect to whichever URL Supabase has
+in **Site URL** unless your app's origin is whitelisted in
+**Redirect URLs**. Default Site URL is `http://localhost:3000`
+(Next.js default) — if you leave it there, every magic-link
+clicked from production email lands on `localhost:3000/#access_token=...`
+which is a different app on your machine (or nothing if you don't
+run anything on :3000).
+
+1. https://supabase.com/dashboard/project/gxnpfbzfqgbhnyqunuwf
+2. **Authentication → URL Configuration**
+3. **Site URL** → set to:
+   ```
+   https://career-buddy.enigkt1.workers.dev
+   ```
+4. **Redirect URLs** → Add URL (3 entries):
+   ```
+   https://career-buddy.enigkt1.workers.dev/**
+   http://localhost:5173/**
+   http://localhost:8788/**
+   ```
+5. **Save**
+
+After this, `signInWithOtp({ email, options: { emailRedirectTo:
+`${origin}/` } })` and `signInWithOAuth({ provider: "google",
+options: { redirectTo: `${origin}/` } })` actually honour the
+runtime origin instead of falling back to Site URL.
+
+---
+
 ## Step 3 — Edge Functions env vars setzen
 
 Generate noch einen secret (separater key für CSRF state token):
@@ -204,6 +235,7 @@ Macht dass alle edge functions anon-calls rejecten.
 |---|---|---|
 | "redirect_uri_mismatch" Google (inbox-connect) | URI in 1.4 nicht exakt gleich wie env var | Check trailing slash, http vs https |
 | "redirect_uri_mismatch" Google (login / sign-in) | Supabase Auth callback `https://<ref>.supabase.co/auth/v1/callback` fehlt in 1.4 Authorized redirect URIs | Add it, save, retry |
+| Magic-link redirects to `localhost:3000/#access_token=...` | Supabase Site URL still default (localhost:3000) + app origin not in Redirect URLs allow-list | Step 2.6 — set Site URL + add app origins. Then request a NEW magic link (old one expired by config change) |
 | "AADSTS50011 redirect URI" Azure | Same issue Azure-side | Check 2.1 / 2.3 redirect URIs |
 | "did not return refresh_token" | User hat schon mal granted | Revoke at https://myaccount.google.com/permissions + retry |
 | Edge function 401 | OAUTH_STATE_SECRET missing | Set env var + redeploy function |
