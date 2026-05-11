@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as JobsRouteImport } from './routes/jobs'
+import { Route as EmailOauthCallbackRouteImport } from './routes/email-oauth-callback'
 import { Route as DesignPreviewRouteImport } from './routes/design-preview'
 import { Route as CvRouteImport } from './routes/cv'
 import { Route as BuddyRouteImport } from './routes/buddy'
@@ -21,9 +23,19 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JobsRoute = JobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailOauthCallbackRoute = EmailOauthCallbackRouteImport.update({
+  id: '/email-oauth-callback',
+  path: '/email-oauth-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DesignPreviewRoute = DesignPreviewRouteImport.update({
@@ -52,7 +64,9 @@ export interface FileRoutesByFullPath {
   '/buddy': typeof BuddyRoute
   '/cv': typeof CvRoute
   '/design-preview': typeof DesignPreviewRoute
+  '/email-oauth-callback': typeof EmailOauthCallbackRoute
   '/jobs': typeof JobsRoute
+  '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
 }
 export interface FileRoutesByTo {
@@ -60,7 +74,9 @@ export interface FileRoutesByTo {
   '/buddy': typeof BuddyRoute
   '/cv': typeof CvRoute
   '/design-preview': typeof DesignPreviewRoute
+  '/email-oauth-callback': typeof EmailOauthCallbackRoute
   '/jobs': typeof JobsRoute
+  '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
 }
 export interface FileRoutesById {
@@ -69,21 +85,41 @@ export interface FileRoutesById {
   '/buddy': typeof BuddyRoute
   '/cv': typeof CvRoute
   '/design-preview': typeof DesignPreviewRoute
+  '/email-oauth-callback': typeof EmailOauthCallbackRoute
   '/jobs': typeof JobsRoute
+  '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/buddy' | '/cv' | '/design-preview' | '/jobs' | '/profile'
+  fullPaths:
+    | '/'
+    | '/buddy'
+    | '/cv'
+    | '/design-preview'
+    | '/email-oauth-callback'
+    | '/jobs'
+    | '/login'
+    | '/profile'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/buddy' | '/cv' | '/design-preview' | '/jobs' | '/profile'
+  to:
+    | '/'
+    | '/buddy'
+    | '/cv'
+    | '/design-preview'
+    | '/email-oauth-callback'
+    | '/jobs'
+    | '/login'
+    | '/profile'
   id:
     | '__root__'
     | '/'
     | '/buddy'
     | '/cv'
     | '/design-preview'
+    | '/email-oauth-callback'
     | '/jobs'
+    | '/login'
     | '/profile'
   fileRoutesById: FileRoutesById
 }
@@ -92,7 +128,9 @@ export interface RootRouteChildren {
   BuddyRoute: typeof BuddyRoute
   CvRoute: typeof CvRoute
   DesignPreviewRoute: typeof DesignPreviewRoute
+  EmailOauthCallbackRoute: typeof EmailOauthCallbackRoute
   JobsRoute: typeof JobsRoute
+  LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
 }
 
@@ -105,11 +143,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/jobs': {
       id: '/jobs'
       path: '/jobs'
       fullPath: '/jobs'
       preLoaderRoute: typeof JobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email-oauth-callback': {
+      id: '/email-oauth-callback'
+      path: '/email-oauth-callback'
+      fullPath: '/email-oauth-callback'
+      preLoaderRoute: typeof EmailOauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/design-preview': {
@@ -148,7 +200,9 @@ const rootRouteChildren: RootRouteChildren = {
   BuddyRoute: BuddyRoute,
   CvRoute: CvRoute,
   DesignPreviewRoute: DesignPreviewRoute,
+  EmailOauthCallbackRoute: EmailOauthCallbackRoute,
   JobsRoute: JobsRoute,
+  LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
 }
 export const routeTree = rootRouteImport

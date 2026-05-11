@@ -11,9 +11,11 @@ import {
 
 import appCss from "../styles.css?url";
 import { Nav } from "@/components/Nav";
-import { PromoBar, SiteFooter } from "@/components/cinema";
+import { AuthGate, PromoBar, SiteFooter } from "@/components/cinema";
 import { FloatingBuddy } from "@/components/buddy/FloatingBuddy";
 import { fetchPersistedTheme } from "@/lib/cinema-theme";
+import { migrateLocalStorageToSupabase } from "@/lib/profile-store";
+import { getCurrentUserId, onAuthChange } from "@/lib/auth";
 
 function NotFoundComponent() {
   return (
@@ -193,6 +195,33 @@ function RootComponent() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    let cancelled = false;
+
+    function runMigrate() {
+      if (cancelled) return;
+      void migrateLocalStorageToSupabase().then((ran) => {
+        if (ran.length > 0) {
+          console.info("[migrate] localStorage → Supabase classes:", ran);
+        }
+      });
+    }
+
+    void getCurrentUserId().then((id) => {
+      if (id) runMigrate();
+    });
+
+    const unsubscribe = onAuthChange((id) => {
+      if (id) runMigrate();
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
     if (window.location.hostname === "localhost") return;
     navigator.serviceWorker.register("/sw.js").catch((err) => {
@@ -202,6 +231,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthGate />
       <div className="min-h-screen flex flex-col bg-cinema-mist">
         <PromoBar
           message="9,980 live operator-track roles · refreshed every night"

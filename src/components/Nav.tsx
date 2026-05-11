@@ -1,5 +1,7 @@
 import { Briefcase, MessageCircle, User } from "lucide-react";
 
+import { AuthPill } from "@/components/cinema/AuthPill";
+
 type NavTarget = {
   label: string;
   href: string;
@@ -32,6 +34,7 @@ export function Nav() {
           {TARGETS.map((t) => (
             <NavLink key={t.label} target={t} />
           ))}
+          <AuthPill />
         </div>
       </div>
     </nav>

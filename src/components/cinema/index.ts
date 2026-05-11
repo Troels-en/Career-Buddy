@@ -9,3 +9,5 @@ export { SectionDivider } from "./SectionDivider";
 export { FloatingCardCluster } from "./FloatingCardCluster";
 export { RevealOnScroll } from "./RevealOnScroll";
 export { SiteFooter } from "./SiteFooter";
+export { AuthGate } from "./AuthGate";
+export { AuthPill } from "./AuthPill";
