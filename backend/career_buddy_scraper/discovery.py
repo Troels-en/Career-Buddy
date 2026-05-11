@@ -23,6 +23,16 @@ ATS_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("workable", re.compile(r"apply\.workable\.com/(?P<slug>[a-z0-9-]+)", re.I)),
     ("personio", re.compile(r"(?P<slug>[a-z0-9-]+)\.jobs\.personio\.(?:de|com)", re.I)),
     ("recruitee", re.compile(r"(?P<slug>[a-z0-9-]+)\.recruitee\.com", re.I)),
+    # Workday slug is compound: <tenant>/<wd_num>/<site_id>. The discovery
+    # regex captures all three as one slug string so the orchestrator can
+    # route it back through `WorkdayAdapter`.
+    (
+        "workday",
+        re.compile(
+            r"(?P<slug>[a-z0-9-]+\.wd\d+\.myworkdayjobs\.com/(?:[a-z]{2}-[A-Z]{2}/)?[A-Za-z0-9_-]+)",
+            re.I,
+        ),
+    ),
 ]
 
 
@@ -42,5 +52,28 @@ async def discover_ats(careers_url: str, client: RateLimitedClient) -> tuple[str
     for provider, pattern in ATS_PATTERNS:
         match = pattern.search(text)
         if match:
-            return provider, match.group("slug").lower()
+            slug = match.group("slug")
+            if provider == "workday":
+                # Captured shape: ``tenant.wd<N>.myworkdayjobs.com[/<lang>]/<site_id>``.
+                # Normalise to the adapter's expected ``tenant/wd_num/site_id``.
+                normalised = _normalise_workday_slug(slug)
+                if normalised is None:
+                    continue
+                return provider, normalised
+            return provider, slug.lower()
     return None
+
+
+_WORKDAY_PARTS = re.compile(
+    r"(?P<tenant>[a-z0-9-]+)\.(?P<wd_num>wd\d+)\.myworkdayjobs\.com"
+    r"(?:/[a-z]{2}-[A-Z]{2})?"
+    r"/(?P<site_id>[A-Za-z0-9_-]+)",
+    re.I,
+)
+
+
+def _normalise_workday_slug(captured: str) -> str | None:
+    m = _WORKDAY_PARTS.search(captured)
+    if m is None:
+        return None
+    return f"{m.group('tenant').lower()}/{m.group('wd_num').lower()}/{m.group('site_id')}"

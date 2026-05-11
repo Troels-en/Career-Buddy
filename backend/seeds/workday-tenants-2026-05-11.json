@@ -1,0 +1,101 @@
+[
+  {
+    "name": "Intel",
+    "domain": "intel.com",
+    "careers_url": "https://intel.wd1.myworkdayjobs.com/en-US/External",
+    "geography": "Santa Clara, US",
+    "stage_focus": "growth",
+    "sector_tags": ["semiconductor", "hardware"],
+    "tier": 1,
+    "sources": ["session-d-gap4-workday"],
+    "notes": "Workday wd1/External; verified 783 jobs"
+  },
+  {
+    "name": "NVIDIA",
+    "domain": "nvidia.com",
+    "careers_url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite",
+    "geography": "Santa Clara, US",
+    "stage_focus": "growth",
+    "sector_tags": ["semiconductor", "ai-hardware"],
+    "tier": 1,
+    "sources": ["session-d-gap4-workday"],
+    "notes": "Workday wd5/NVIDIAExternalCareerSite; verified 2000 jobs (cap)"
+  },
+  {
+    "name": "Salesforce",
+    "domain": "salesforce.com",
+    "careers_url": "https://salesforce.wd12.myworkdayjobs.com/en-US/External_Career_Site",
+    "geography": "San Francisco, US",
+    "stage_focus": "growth",
+    "sector_tags": ["enterprise-saas", "crm"],
+    "tier": 1,
+    "sources": ["session-d-gap4-workday"],
+    "notes": "Workday wd12/External_Career_Site; verified 1366 jobs"
+  },
+  {
+    "name": "Citi",
+    "domain": "citi.com",
+    "careers_url": "https://citi.wd5.myworkdayjobs.com/en-US/2",
+    "geography": "New York, US",
+    "stage_focus": "growth",
+    "sector_tags": ["fintech", "banking"],
+    "tier": 1,
+    "sources": ["session-d-gap4-workday"],
+    "notes": "Workday wd5/2; verified 2000 jobs (cap)"
+  },
+  {
+    "name": "HP",
+    "domain": "hp.com",
+    "careers_url": "https://hp.wd5.myworkdayjobs.com/en-US/ExternalCareerSite",
+    "geography": "Palo Alto, US",
+    "stage_focus": "growth",
+    "sector_tags": ["hardware"],
+    "tier": 1,
+    "sources": ["session-d-gap4-workday"],
+    "notes": "Workday wd5/ExternalCareerSite; verified 494 jobs"
+  },
+  {
+    "name": "Workday",
+    "domain": "workday.com",
+    "careers_url": "https://workday.wd5.myworkdayjobs.com/en-US/Workday",
+    "geography": "Pleasanton, US",
+    "stage_focus": "growth",
+    "sector_tags": ["enterprise-saas", "hris"],
+    "tier": 1,
+    "sources": ["session-d-gap4-workday"],
+    "notes": "Workday's own board; verified 374 jobs"
+  },
+  {
+    "name": "Novartis",
+    "domain": "novartis.com",
+    "careers_url": "https://novartis.wd3.myworkdayjobs.com/en-US/Novartis_careers",
+    "geography": "Basel, CH",
+    "stage_focus": "growth",
+    "sector_tags": ["pharma", "biotech"],
+    "tier": 1,
+    "sources": ["session-d-gap4-workday"],
+    "notes": "DACH pharma; Workday wd3/Novartis_careers; verified 703 jobs"
+  },
+  {
+    "name": "Pfizer",
+    "domain": "pfizer.com",
+    "careers_url": "https://pfizer.wd1.myworkdayjobs.com/en-US/PfizerCareers",
+    "geography": "New York, US",
+    "stage_focus": "growth",
+    "sector_tags": ["pharma", "biotech"],
+    "tier": 1,
+    "sources": ["session-d-gap4-workday"],
+    "notes": "Workday wd1/PfizerCareers; verified 526 jobs"
+  },
+  {
+    "name": "Philips",
+    "domain": "philips.com",
+    "careers_url": "https://philips.wd3.myworkdayjobs.com/en-US/jobs-and-careers",
+    "geography": "Amsterdam, NL",
+    "stage_focus": "growth",
+    "sector_tags": ["medtech", "consumer"],
+    "tier": 1,
+    "sources": ["session-d-gap4-workday"],
+    "notes": "EU medtech; Workday wd3/jobs-and-careers; verified 1071 jobs"
+  }
+]

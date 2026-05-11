@@ -34,6 +34,7 @@ from .ats.lever import LeverAdapter
 from .ats.personio import PersonioAdapter
 from .ats.recruitee import RecruiteeAdapter
 from .ats.workable import WorkableAdapter
+from .ats.workday import WorkdayAdapter
 from .db import REPO_ROOT, connect
 from .discovery import discover_ats
 from .http import RateLimitedClient
@@ -49,6 +50,7 @@ ADAPTERS: dict[str, Any] = {
     "workable": WorkableAdapter(),
     "personio": PersonioAdapter(),
     "recruitee": RecruiteeAdapter(),
+    "workday": WorkdayAdapter(),
 }
 
 

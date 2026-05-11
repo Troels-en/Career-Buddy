@@ -20,6 +20,7 @@ class AtsSource(StrEnum):
     WORKABLE = "workable"
     PERSONIO = "personio"
     RECRUITEE = "recruitee"
+    WORKDAY = "workday"
     YC_WAAS = "yc-waas"
     WELLFOUND = "wellfound"
     CUSTOM = "custom"
