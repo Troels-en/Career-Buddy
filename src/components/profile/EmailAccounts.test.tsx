@@ -21,7 +21,7 @@
 
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("@/lib/utils", () => ({
   cn: (...parts: Array<string | false | null | undefined>) =>
@@ -112,5 +112,102 @@ describe("EmailAccounts — IMAP placeholder modal", () => {
     expect(
       screen.queryByRole("heading", { name: /IMAP support/i }),
     ).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Round-14 B expansion — auth-required + redirect + error surfaces
+// ---------------------------------------------------------------------------
+
+describe("EmailAccounts — auth-required surface", () => {
+  test("401 status → renders 'sign in before connecting' prompt with /login link", async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: "Unauthorized", context: { status: 401 } },
+    });
+    const user = userEvent.setup();
+    render(<EmailAccounts />);
+    await user.click(screen.getByRole("button", { name: /Connect Gmail/i }));
+    expect(
+      screen.getByText(/signed in before connecting/i),
+    ).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /Sign in/i });
+    expect(link).toHaveAttribute("href", "/login");
+  });
+
+  test("'sign in required' message body (no status) → auth-required surface", async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: "sign in required for OAuth connect" },
+    });
+    const user = userEvent.setup();
+    render(<EmailAccounts />);
+    await user.click(screen.getByRole("button", { name: /Connect Gmail/i }));
+    expect(
+      screen.getByText(/signed in before connecting/i),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("EmailAccounts — error surfaces", () => {
+  test("generic edge function error → red error pill", async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: "internal server error", context: { status: 500 } },
+    });
+    const user = userEvent.setup();
+    render(<EmailAccounts />);
+    await user.click(screen.getByRole("button", { name: /Connect Outlook/i }));
+    expect(
+      screen.getByText(/Outlook couldn't start: internal server error/i),
+    ).toBeInTheDocument();
+  });
+
+  test("missing authoriseUrl in success body → error pill", async () => {
+    invokeMock.mockResolvedValueOnce({ data: { other: "junk" }, error: null });
+    const user = userEvent.setup();
+    render(<EmailAccounts />);
+    await user.click(screen.getByRole("button", { name: /Connect Gmail/i }));
+    expect(
+      screen.getByText(/Gmail couldn't start: Edge function returned no authorise URL/i),
+    ).toBeInTheDocument();
+  });
+
+  test("invoke throws → error pill with thrown message", async () => {
+    invokeMock.mockRejectedValueOnce(new Error("network blip"));
+    const user = userEvent.setup();
+    render(<EmailAccounts />);
+    await user.click(screen.getByRole("button", { name: /Connect Gmail/i }));
+    expect(
+      screen.getByText(/Gmail couldn't start: network blip/i),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("EmailAccounts — redirect on happy path", () => {
+  const originalLocation = window.location;
+
+  beforeEach(() => {
+    delete (window as unknown as { location?: unknown }).location;
+    (window as unknown as { location: { href: string } }).location = {
+      href: "/profile",
+    };
+  });
+
+  // restore after each test in this describe
+  afterEach(() => {
+    (window as unknown as { location: Location }).location = originalLocation;
+  });
+
+  test("authoriseUrl returned → window.location.href is set", async () => {
+    const url = "https://accounts.google.com/o/oauth2/v2/auth?client_id=x";
+    invokeMock.mockResolvedValueOnce({
+      data: { authoriseUrl: url },
+      error: null,
+    });
+    const user = userEvent.setup();
+    render(<EmailAccounts />);
+    await user.click(screen.getByRole("button", { name: /Connect Gmail/i }));
+    expect((window.location as unknown as { href: string }).href).toBe(url);
   });
 });
