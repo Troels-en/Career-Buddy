@@ -140,9 +140,12 @@ function makeApp(overrides: Partial<ApplicationRowSource> = {}): ApplicationRowS
 }
 
 describe("applicationToRow", () => {
-  test("maps every field to its snake_case Supabase column", () => {
-    const out = applicationToRow(makeApp());
+  const UID = "user-uid-xyz";
+
+  test("maps every field to its snake_case Supabase column + sets user_id", () => {
+    const out = applicationToRow(makeApp(), UID);
     expect(out).toEqual({
+      user_id: UID,
       client_id: "uuid-abc",
       company: "Acme",
       role: "Founders Associate",
@@ -156,13 +159,16 @@ describe("applicationToRow", () => {
   });
 
   test("undefined url + notes → null", () => {
-    const out = applicationToRow(makeApp({ url: undefined, notes: undefined }));
+    const out = applicationToRow(
+      makeApp({ url: undefined, notes: undefined }),
+      UID,
+    );
     expect(out.url).toBeNull();
     expect(out.notes).toBeNull();
   });
 
   test("empty last_event → null", () => {
-    const out = applicationToRow(makeApp({ last_event: "" }));
+    const out = applicationToRow(makeApp({ last_event: "" }), UID);
     expect(out.last_event_date).toBeNull();
   });
 });

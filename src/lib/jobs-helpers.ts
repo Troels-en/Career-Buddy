@@ -111,8 +111,12 @@ export function profileCompleteness(profile: CompletenessProfile): {
  * Application → Supabase row shape (snake_case columns,
  * `client_id`-keyed for the single-user phase).
  */
-export function applicationToRow(a: ApplicationRowSource): ApplicationsInsert {
+export function applicationToRow(
+  a: ApplicationRowSource,
+  userId: string,
+): ApplicationsInsert {
   return {
+    user_id: userId,
     client_id: a.id,
     company: a.company,
     role: a.role,

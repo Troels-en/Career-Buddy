@@ -76,6 +76,7 @@ import {
   type SortKey,
 } from "@/lib/job-filters";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUserId } from "@/lib/auth";
 import { AddAppModal } from "@/components/applications/AddAppModal";
 import { ApplicationsTracker } from "@/components/applications/ApplicationsTracker";
 import { DraftModal } from "@/components/drafts/DraftModal";
@@ -504,12 +505,19 @@ export default function CareerBuddy({ rolesOnly = false }: CareerBuddyProps = {}
   }
 
   function syncApp(a: Application) {
-    void supabase
-      .from("applications")
-      .upsert(applicationToRow(a), { onConflict: "client_id" })
-      .then(({ error }) => {
-        if (error) console.warn("[applications] upsert failed", error.message);
-      });
+    // Post-multi-user-cutover: applications.user_id is NOT NULL +
+    // RLS-scoped. Anonymous mode → skip Supabase upsert,
+    // localStorage stays canonical (the role-fit + UI work without).
+    void (async () => {
+      const userId = await getCurrentUserId();
+      if (!userId) return;
+      const { error } = await supabase
+        .from("applications")
+        .upsert(applicationToRow(a, userId), {
+          onConflict: "user_id,client_id",
+        });
+      if (error) console.warn("[applications] upsert failed", error.message);
+    })();
   }
 
   function addApplication(company: string, role: string, opts?: { url?: string; fit?: number }) {
