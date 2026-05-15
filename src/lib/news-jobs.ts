@@ -26,6 +26,7 @@ import {
   type FitProfile,
 } from "@/lib/job-fit";
 import { sortJobs } from "@/lib/job-filters";
+import { track } from "@/lib/telemetry";
 import type { ScoredJob, VcJob } from "@/lib/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -109,7 +110,11 @@ function mapRow(r: NewsJobRow): VcJob {
 
 /**
  * Fetch active jobs in the given bucket's time window. Server returns
- * `first_seen_at`-ordered up to 200 rows; client re-ranks by fit.
+ * `first_seen_at`-ordered up to 999 rows (PostgREST cap); client
+ * re-ranks by fit. If the window genuinely exceeds 999 rows the
+ * ranking truncates to the most-recent 999 — a `news_feed_truncated`
+ * telemetry event fires so F1.1 (server-side cache) can be triggered
+ * by real data rather than guesswork.
  */
 export async function fetchBucketRows(
   bucket: NewsBucket,
@@ -137,7 +142,15 @@ export async function fetchBucketRows(
 
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as unknown as NewsJobRow[];
+  const rows = (data ?? []) as unknown as NewsJobRow[];
+  // Detect the silent 999-row truncation ceiling. If a bucket window
+  // genuinely returns 1000 rows the client-side ranking is no longer
+  // "top-fit of the period" — surface it so F1.1 (server cache) is
+  // triggered by data, not a guess.
+  if (rows.length >= 1000) {
+    void track("news_feed_truncated", { bucket });
+  }
+  return rows;
 }
 
 async function fetchFeedState(): Promise<string | null> {
