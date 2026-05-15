@@ -6,6 +6,7 @@ import {
   PillLink,
   SectionDivider,
 } from "@/components/cinema";
+import { TopJobsToday } from "@/components/overview/TopJobsToday";
 import { usePhoto } from "@/lib/cinema-theme";
 
 export const Route = createFileRoute("/")({
@@ -51,6 +52,9 @@ function Index() {
         }
       />
       <SectionDivider from="cream" to="white" />
+      <div className="bg-white">
+        <TopJobsToday />
+      </div>
       <CareerBuddy />
     </div>
   );

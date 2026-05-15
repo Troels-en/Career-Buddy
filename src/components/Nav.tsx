@@ -1,4 +1,4 @@
-import { Briefcase, MessageCircle, User } from "lucide-react";
+import { Briefcase, MessageCircle, Newspaper, User } from "lucide-react";
 
 import { AuthPill } from "@/components/cinema/AuthPill";
 
@@ -10,8 +10,10 @@ type NavTarget = {
 
 // Phase 0.5: added "Jobs" — the universal aggregated feed lives at
 // /jobs (was previously buried inside Overview's role grid).
+// Round-16 F1: added "News" — daily top-fit jobs feed.
 const TARGETS: NavTarget[] = [
   { label: "Jobs", href: "/jobs", Icon: Briefcase },
+  { label: "News", href: "/news", Icon: Newspaper },
   { label: "Profile", href: "/profile", Icon: User },
   { label: "Buddy", href: "/buddy", Icon: MessageCircle },
 ];

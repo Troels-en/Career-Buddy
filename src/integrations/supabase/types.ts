@@ -291,6 +291,24 @@ export type Database = {
         }
         Relationships: []
       }
+      user_feed_state: {
+        Row: {
+          user_id: string
+          last_feed_view_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          last_feed_view_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          last_feed_view_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_profile: {
         Row: {
           created_at: string
