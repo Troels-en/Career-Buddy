@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as NewsRouteImport } from './routes/news'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as EmailOauthCallbackRouteImport } from './routes/email-oauth-callback'
@@ -21,6 +22,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NewsRoute = NewsRouteImport.update({
+  id: '/news',
+  path: '/news',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/email-oauth-callback': typeof EmailOauthCallbackRoute
   '/jobs': typeof JobsRoute
   '/login': typeof LoginRoute
+  '/news': typeof NewsRoute
   '/profile': typeof ProfileRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/email-oauth-callback': typeof EmailOauthCallbackRoute
   '/jobs': typeof JobsRoute
   '/login': typeof LoginRoute
+  '/news': typeof NewsRoute
   '/profile': typeof ProfileRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/email-oauth-callback': typeof EmailOauthCallbackRoute
   '/jobs': typeof JobsRoute
   '/login': typeof LoginRoute
+  '/news': typeof NewsRoute
   '/profile': typeof ProfileRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/email-oauth-callback'
     | '/jobs'
     | '/login'
+    | '/news'
     | '/profile'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/email-oauth-callback'
     | '/jobs'
     | '/login'
+    | '/news'
     | '/profile'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/email-oauth-callback'
     | '/jobs'
     | '/login'
+    | '/news'
     | '/profile'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   EmailOauthCallbackRoute: typeof EmailOauthCallbackRoute
   JobsRoute: typeof JobsRoute
   LoginRoute: typeof LoginRoute
+  NewsRoute: typeof NewsRoute
   ProfileRoute: typeof ProfileRoute
 }
 
@@ -141,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/news': {
+      id: '/news'
+      path: '/news'
+      fullPath: '/news'
+      preLoaderRoute: typeof NewsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmailOauthCallbackRoute: EmailOauthCallbackRoute,
   JobsRoute: JobsRoute,
   LoginRoute: LoginRoute,
+  NewsRoute: NewsRoute,
   ProfileRoute: ProfileRoute,
 }
 export const routeTree = rootRouteImport

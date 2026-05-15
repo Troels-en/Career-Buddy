@@ -24,7 +24,7 @@ export function TopJobsToday() {
           <h2 className="text-cinema-h2">Fresh today, picked for you</h2>
           <a
             href="/news"
-            onClick={() => void track("feed_card_click", { from: "overview_teaser" })}
+            onClick={() => void track("feed_see_all", { from: "overview_teaser" })}
             className="inline-flex items-center gap-1 text-base text-cinema-pine hover:text-cinema-ink no-underline"
           >
             See all news <ArrowUpRight className="w-3.5 h-3.5" />

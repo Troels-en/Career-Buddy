@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import { JobCard } from "@/components/jobs/JobCard";
 import {
   bumpFeedView,
+  useFeedState,
   useNewsJobs,
   type NewsBucket,
 } from "@/lib/news-jobs";
@@ -28,15 +29,27 @@ const TABS: Array<{ key: NewsBucket; label: string }> = [
 export function NewsFeed() {
   const [bucket, setBucket] = useState<NewsBucket>("today");
   const { data: jobs, isLoading, isError } = useNewsJobs(bucket, 10);
+  // Observe the same feed-state query useNewsJobs reads (React Query
+  // dedupes by key — one fetch, shared cache).
+  const feedState = useFeedState();
+  const bumpedRef = useRef(false);
 
   useEffect(() => {
     void track("feed_view");
-    // Bump the server-side anchor once per mount so the nav badge
-    // resets. Done after a tick so the initial new_since_visit query
-    // still sees the *prior* anchor.
-    const t = setTimeout(() => void bumpFeedView(), 1500);
-    return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    // Bump the server-side anchor exactly once, and ONLY after the
+    // prior anchor has been fetched. By the time feedState.isFetched
+    // is true, useNewsJobs has already locked the prior `lastViewAt`
+    // into its React Query key, so the current session's
+    // new_since_visit query saw the OLD anchor. The bump advances the
+    // DB anchor for the NEXT visit without a cancellable timer.
+    if (feedState.isFetched && !bumpedRef.current) {
+      bumpedRef.current = true;
+      void bumpFeedView();
+    }
+  }, [feedState.isFetched]);
 
   function switchTab(next: NewsBucket) {
     setBucket(next);

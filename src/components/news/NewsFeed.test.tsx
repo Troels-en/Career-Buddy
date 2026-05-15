@@ -15,9 +15,11 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const useNewsJobsMock = vi.fn();
 const bumpFeedViewMock = vi.fn();
+const useFeedStateMock = vi.fn();
 vi.mock("@/lib/news-jobs", () => ({
   useNewsJobs: (...args: unknown[]) => useNewsJobsMock(...args),
   bumpFeedView: () => bumpFeedViewMock(),
+  useFeedState: () => useFeedStateMock(),
 }));
 
 const trackMock = vi.fn();
@@ -65,6 +67,7 @@ beforeEach(() => {
     isLoading: false,
     isError: false,
   });
+  useFeedStateMock.mockReturnValue({ data: null, isFetched: true });
 });
 
 afterEach(() => {
@@ -138,5 +141,19 @@ describe("NewsFeed — telemetry", () => {
   test("fires feed_view on mount", () => {
     render(<NewsFeed />);
     expect(trackMock).toHaveBeenCalledWith("feed_view");
+  });
+});
+
+describe("NewsFeed — feed-state anchor bump", () => {
+  test("bumps the anchor once feed-state has been fetched", () => {
+    useFeedStateMock.mockReturnValue({ data: null, isFetched: true });
+    render(<NewsFeed />);
+    expect(bumpFeedViewMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("does NOT bump while feed-state is still loading", () => {
+    useFeedStateMock.mockReturnValue({ data: undefined, isFetched: false });
+    render(<NewsFeed />);
+    expect(bumpFeedViewMock).not.toHaveBeenCalled();
   });
 });

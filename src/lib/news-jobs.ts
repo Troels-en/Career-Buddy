@@ -19,7 +19,6 @@ import { useQuery } from "@tanstack/react-query";
 
 import { loadCareerBuddyState } from "@/lib/cv-storage";
 import {
-  buildProfileTokens,
   fitScore,
   fitWhy,
   profileYearsExperience,
@@ -38,7 +37,8 @@ export type NewsBucket = "today" | "week" | "new_since_visit";
 export const NEWS_JOBS_QUERY_KEY = (
   bucket: NewsBucket,
   lastViewAt: string | null,
-) => ["news-jobs", bucket, lastViewAt] as const;
+  topN: number,
+) => ["news-jobs", bucket, lastViewAt, topN] as const;
 
 export const FEED_STATE_QUERY_KEY = ["user-feed-state"] as const;
 
@@ -115,12 +115,16 @@ export async function fetchBucketRows(
   bucket: NewsBucket,
   lastViewAt: string | null,
 ): Promise<NewsJobRow[]> {
+  // Fetch up to 999 rows (PostgREST cap) so client-side fit ranking
+  // sees the full week/new-since-visit pool, not just the 200 most
+  // recent. The "today" bucket is naturally small; week + since-visit
+  // need the wider window to honour the "top-fit of the period" claim.
   let q = supabase
     .from("jobs")
     .select(SELECT_COLS)
     .eq("is_active", true)
     .order("first_seen_at", { ascending: false, nullsFirst: false })
-    .limit(200);
+    .range(0, 999);
 
   if (bucket === "today") {
     q = q.gte("first_seen_at", isoCutoff(WINDOWS.today));
@@ -203,10 +207,14 @@ export function useNewsJobs(bucket: NewsBucket, topN = 10) {
   const { data: lastViewAt } = useFeedState();
 
   const fitProfile = useMemo(loadFitProfile, []);
-  const profTokens = useMemo(
-    () => buildProfileTokens(fitProfile),
-    [fitProfile],
-  );
+  // profTokens MUST be built identically to JobsFeed
+  // (JobsFeed.tsx:264-267) — headline + strengths + role categories —
+  // so a job scores the same on /jobs and /news. Do not swap in
+  // buildProfileTokens here without changing JobsFeed in lockstep.
+  const profTokens = useMemo(() => {
+    const seed = `${fitProfile.headline} ${fitProfile.strengths.join(" ")} ${fitProfile.target_role_categories.join(" ")}`;
+    return tokenize(seed);
+  }, [fitProfile]);
   const profYears = useMemo(() => {
     const p = loadCareerBuddyState().profile ?? {};
     if (typeof p.years_min === "number" && p.years_min > 0) return p.years_min;
@@ -214,7 +222,7 @@ export function useNewsJobs(bucket: NewsBucket, topN = 10) {
   }, [fitProfile]);
 
   return useQuery({
-    queryKey: NEWS_JOBS_QUERY_KEY(bucket, lastViewAt ?? null),
+    queryKey: NEWS_JOBS_QUERY_KEY(bucket, lastViewAt ?? null, topN),
     queryFn: async (): Promise<ScoredJob[]> => {
       const rows = await fetchBucketRows(bucket, lastViewAt ?? null);
       const scored: ScoredJob[] = rows.map((r) => {
