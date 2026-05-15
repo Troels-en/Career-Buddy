@@ -12,7 +12,7 @@ export const Route = createFileRoute("/jobs")({
       {
         name: "description",
         content:
-          "Every live operator-track role in one filterable feed. 9,980 openings across 209 venture-backed firms and their portfolio companies.",
+          "Every live operator-track role in one filterable feed. Thousands of openings across hundreds of venture-backed firms and their portfolio companies, refreshed every night.",
       },
     ],
   }),

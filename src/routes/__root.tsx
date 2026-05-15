@@ -16,6 +16,21 @@ import { FloatingBuddy } from "@/components/buddy/FloatingBuddy";
 import { fetchPersistedTheme } from "@/lib/cinema-theme";
 import { migrateLocalStorageToSupabase } from "@/lib/profile-store";
 import { getCurrentUserId, onAuthChange } from "@/lib/auth";
+import { useActiveJobsCount, formatJobsCount } from "@/lib/jobs-count";
+
+/**
+ * PromoBar wrapper that fetches the live `is_active=true` jobs
+ * count and renders it in the banner. Falls back to a generic
+ * label while loading or on error so the chrome never reads "0".
+ */
+function LivePromoBar() {
+  const { data: count, isLoading, isError } = useActiveJobsCount();
+  const message =
+    isLoading || isError || typeof count !== "number"
+      ? "Live operator-track roles · refreshed every night"
+      : `${formatJobsCount(count)} live operator-track roles · refreshed every night`;
+  return <PromoBar message={message} href="/jobs" cta="See all" />;
+}
 
 function NotFoundComponent() {
   return (
@@ -233,11 +248,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthGate />
       <div className="min-h-screen flex flex-col bg-cinema-mist">
-        <PromoBar
-          message="9,980 live operator-track roles · refreshed every night"
-          href="/jobs"
-          cta="See all"
-        />
+        <LivePromoBar />
         <Nav />
         <main className="flex-1">
           <Outlet />
