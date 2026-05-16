@@ -369,6 +369,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_radar_snapshots: {
+        Row: {
+          id: string
+          user_id: string | null
+          captured_at: string
+          source_cv_filename: string | null
+          axes: Json
+          strengths: Json
+          weaknesses: Json
+          gaps: Json
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          captured_at?: string
+          source_cv_filename?: string | null
+          axes: Json
+          strengths: Json
+          weaknesses: Json
+          gaps: Json
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          captured_at?: string
+          source_cv_filename?: string | null
+          axes?: Json
+          strengths?: Json
+          weaknesses?: Json
+          gaps?: Json
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           background: string | null

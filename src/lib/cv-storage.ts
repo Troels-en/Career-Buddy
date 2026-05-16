@@ -38,6 +38,22 @@ export type SkillEntry = {
   evidence?: string;
 };
 
+/** One spoke of the CV radar — a pinned axis name + 0-100 score. */
+export type CvRadarAxis = { name: string; score: number };
+
+/**
+ * 6-axis CV radar (analyze-cv F2). `snapshot_id` references the
+ * `user_radar_snapshots` row the edge function appended; null when the
+ * caller was anonymous or the insert failed.
+ */
+export type CvRadar = {
+  axes: CvRadarAxis[];
+  strengths: string[];
+  weaknesses: string[];
+  gaps: string[];
+  snapshot_id?: string | null;
+};
+
 export type CvAnalysisResponse = {
   summary?: string | null;
   fit_score?: number | null;
@@ -51,6 +67,7 @@ export type CvAnalysisResponse = {
   work_history?: unknown[];
   education?: unknown[];
   skills?: SkillEntry[];
+  radar?: CvRadar;
 };
 
 export type Profile = {
@@ -67,6 +84,7 @@ export type Profile = {
   target_role_categories?: string[];
   location_preferences?: string[];
   skills?: SkillEntry[];
+  radar?: CvRadar;
   // Forward-compatible: monolith may carry additional keys we don't
   // own here (target_role, target_geo, work_history, etc.). They pass
   // through untouched via the spread in mergeAnalysisIntoState.
@@ -126,6 +144,7 @@ export function saveCareerBuddyState(state: CareerBuddyState): void {
  *  - array fields (strengths, gaps, recommendations,
  *    target_role_categories, location_preferences): non-empty
  *    analysis array WINS, otherwise prior array sticks
+ *  - radar: present analysis radar WINS, otherwise prior radar sticks
  *  - any other profile fields the user filled (target_role,
  *    target_geo, work_history, …) pass through unchanged via spread
  */
@@ -157,6 +176,9 @@ export function mergeAnalysisIntoState(
       ? analysis.location_preferences
       : (prior.location_preferences ?? []),
     skills: analysis.skills?.length ? analysis.skills : (prior.skills ?? []),
+    // radar: a fresh analysis WINS; otherwise the prior radar sticks
+    // (so a re-render that lacks a radar payload never blanks it).
+    radar: analysis.radar ?? prior.radar,
   };
   return { ...state, profile: next };
 }

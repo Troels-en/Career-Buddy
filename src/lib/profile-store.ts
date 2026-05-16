@@ -225,6 +225,13 @@ function profileToRow(profile: Profile, userId: string | null): UserProfileRow {
  *
  * Stamps `profile.updated_at` (ISO string) on the local profile so
  * the init path can compare timestamps with Supabase's `updated_at`.
+ *
+ * The F2 CV radar rides along: `mergeAnalysisIntoState` copies
+ * `analysis.radar` (axes + insights + `snapshot_id`) onto the local
+ * profile so the latest snapshot drives the Profile-route radar. The
+ * snapshot row itself is appended server-side by the analyze-cv edge
+ * function; `user_radar_snapshots` is not part of the `user_profile`
+ * upsert below.
  */
 export async function setProfileFromAnalysis(
   analysis: CvAnalysisResponse,

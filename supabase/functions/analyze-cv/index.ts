@@ -5,6 +5,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 import { authenticate, unauthorisedResponse } from "../_shared/auth.ts";
+import {
+  buildRadarPromptSection,
+  insertRadarSnapshot,
+  RADAR_RESPONSE_SCHEMA,
+  selectRadarAxes,
+  validateRadar,
+} from "./radar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -114,6 +121,7 @@ const RESPONSE_SCHEMA = {
       },
       description: "Concrete skills extracted from the CV with inferred level + years from work history.",
     },
+    radar: RADAR_RESPONSE_SCHEMA,
   },
   required: [
     "summary",
@@ -125,6 +133,7 @@ const RESPONSE_SCHEMA = {
     "location_preferences",
     "work_history",
     "skills",
+    "radar",
   ],
 };
 
@@ -150,10 +159,17 @@ serve(async (req) => {
   }
 
   try {
-    const { cvText, targetProfile } = await req.json();
+    const { cvText, targetProfile, targetRoleCategories, cvFilename } =
+      await req.json();
     if (!cvText || typeof cvText !== "string") {
       return jsonResponse({ error: "cvText required" }, 400);
     }
+
+    const radarAxes = selectRadarAxes(
+      Array.isArray(targetRoleCategories)
+        ? targetRoleCategories.filter((c): c is string => typeof c === "string")
+        : [],
+    );
 
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) {
@@ -164,7 +180,7 @@ serve(async (req) => {
       targetProfile ||
       "Founders Associate / Operating Associate, Berlin / Remote-DACH, business-background grad (e.g. European business-school master), 0-2 years experience.";
 
-    const userPrompt = `TARGET PROFILE:\n${target}\n\nCV TEXT:\n${cvText.slice(0, 24000)}`;
+    const userPrompt = `TARGET PROFILE:\n${target}\n\n${buildRadarPromptSection(radarAxes)}\n\nCV TEXT:\n${cvText.slice(0, 24000)}`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
 
@@ -215,6 +231,24 @@ serve(async (req) => {
     }
 
     sanitizeSkills(analysis);
+
+    // Radar — reject a malformed payload (wrong axes, out-of-range
+    // scores, empty insight arrays) rather than persist garbage.
+    let radar;
+    try {
+      radar = validateRadar((analysis as Record<string, unknown>).radar, radarAxes);
+    } catch (radarErr) {
+      console.error("radar validation failed", radarErr);
+      return jsonResponse({ error: "Gemini returned an invalid radar payload" }, 502);
+    }
+
+    const snapshotId = await insertRadarSnapshot(
+      req,
+      authResult.userId,
+      radar,
+      typeof cvFilename === "string" ? cvFilename : null,
+    );
+    (analysis as Record<string, unknown>).radar = { ...radar, snapshot_id: snapshotId };
 
     return jsonResponse({ analysis });
   } catch (e) {
