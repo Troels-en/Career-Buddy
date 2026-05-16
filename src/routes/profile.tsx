@@ -13,6 +13,7 @@ import {
 import { CvInsights } from "@/components/profile/CvInsights";
 import { CvRadar } from "@/components/profile/CvRadar";
 import { CvUploadInline } from "@/components/profile/CvUploadInline";
+import { LinkedInImport } from "@/components/profile/LinkedInImport";
 import { EmailAccounts } from "@/components/profile/EmailAccounts";
 import { ThemePicker } from "@/components/profile/ThemePicker";
 import { usePhoto } from "@/lib/cinema-theme";
@@ -130,7 +131,7 @@ function ProfilePage() {
         }
         cta={
           <>
-            <PillLink href="#cv-upload">Upload CV</PillLink>
+            <PillLink href="#cv-upload">Build profile</PillLink>
             <PillLink href="#tracks" variant="soft">
               Pick tracks
             </PillLink>
@@ -335,24 +336,34 @@ function ProfilePage() {
 
       <SectionDivider from="white" to="cream" />
 
-      {/* Section 4 — CV upload (inline, no nav-jump) */}
+      {/* Section 4 — Build profile (LinkedIn primary, CV optional) */}
       <section id="cv-upload" className="bg-cinema-cream scroll-mt-24">
         <div className="max-w-7xl mx-auto px-6 md:px-12 py-20 md:py-24">
           <RevealOnScroll>
             <GlassPanel className="grid gap-8">
               <div>
                 <div className="text-cinema-eyebrow text-cinema-ink-mute mb-4">
-                  04 — CV
+                  04 — Build your profile
                 </div>
-                <h2 className="text-cinema-h1 mb-4">Drop your CV here.</h2>
+                <h2 className="text-cinema-h1 mb-4">Start from LinkedIn.</h2>
                 <p className="text-cinema-body max-w-2xl">
-                  PDF, .docx or .txt. Buddy reads it, extracts the structured
-                  profile, and saves it locally so the Overview is ready when
-                  you switch over. No raw file ever leaves your browser
-                  un-sanitised.
+                  The fastest start: paste your LinkedIn profile and Buddy
+                  extracts your work history, named skills, and a structured
+                  profile. Prefer a file? Upload a CV further down instead.
+                  Nothing leaves your browser un-sanitised.
                 </p>
               </div>
-              <CvUploadInline onAnalysed={refreshAfterCv} />
+              <LinkedInImport onAnalysed={refreshAfterCv} />
+              <div className="border-t border-cinema-mint pt-8">
+                <div className="text-cinema-eyebrow text-cinema-ink-mute mb-2">
+                  Or upload a CV instead
+                </div>
+                <p className="text-cinema-body max-w-2xl mb-5">
+                  PDF, .docx or .txt — Buddy reads it and builds the same
+                  structured profile.
+                </p>
+                <CvUploadInline onAnalysed={refreshAfterCv} />
+              </div>
               {radar && (
                 <div className="border-t border-cinema-mint pt-8">
                   <div className="text-cinema-eyebrow text-cinema-ink-mute mb-2">
