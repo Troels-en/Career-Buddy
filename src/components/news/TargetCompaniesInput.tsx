@@ -42,11 +42,13 @@ export function TargetCompaniesInput() {
   }
 
   async function handleRemove(name: string) {
+    setError(null);
     try {
       await removeTargetCompany(name);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't remove that company.");
+    } finally {
       await queryClient.invalidateQueries({ queryKey: TARGET_COMPANIES_QUERY_KEY });
-    } catch {
-      // Swallow — the next list fetch resyncs the chip set.
     }
   }
 

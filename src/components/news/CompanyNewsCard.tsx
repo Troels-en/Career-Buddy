@@ -15,6 +15,9 @@ export function CompanyNewsCard({ item }: { item: CompanyNewsItem }) {
       newsId: item.id,
       company: item.company_name,
     });
+    // Defence in depth: only ever open http(s) links, never a
+    // `javascript:` / `data:` URL that slipped past ingestion.
+    if (!/^https?:\/\//i.test(item.url)) return;
     window.open(item.url, "_blank", "noopener,noreferrer");
   }
 
@@ -31,7 +34,7 @@ export function CompanyNewsCard({ item }: { item: CompanyNewsItem }) {
   return (
     <div className="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
       <div className="flex items-center gap-2 text-cinema-caption text-cinema-ink-mute mb-2 flex-wrap">
-        <span className="font-medium text-cinema-ink-soft">
+        <span className="font-medium text-cinema-ink-soft capitalize">
           {item.company_name}
         </span>
         {item.source && (

@@ -11,7 +11,24 @@ import {
   assertEquals,
 } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
-import { distinctCompanies, handleRequest } from "./handler.ts";
+import {
+  distinctCompanies,
+  fairTrim,
+  handleRequest,
+  type NewsItem,
+} from "./handler.ts";
+
+function newsItem(company: string, n: number): NewsItem {
+  return {
+    id: `${company}-${n}`,
+    company_name: company,
+    headline: `${company} headline ${n}`,
+    url: `https://news.test/${company}/${n}`,
+    summary: null,
+    source: "Test",
+    published_at: new Date().toISOString(),
+  };
+}
 
 Deno.test("OPTIONS preflight returns CORS headers, no body", async () => {
   const res = await handleRequest(
@@ -49,9 +66,24 @@ Deno.test("distinctCompanies dedupes, trims, drops empties, keeps order", () => 
     { company: null },
     { company: "Stripe" },
   ]);
-  assertEquals(out, ["Stripe", "Notion"]);
+  assertEquals(out, ["stripe", "notion"]);
 });
 
 Deno.test("distinctCompanies returns [] for empty input", () => {
   assertEquals(distinctCompanies([]), []);
+});
+
+Deno.test("distinctCompanies lowercases so casing never hides news", () => {
+  const out = distinctCompanies([{ company: "Stripe" }, { company: "stripe" }]);
+  assertEquals(out, ["stripe"]);
+});
+
+Deno.test("fairTrim caps per company so one loud company can't dominate", () => {
+  const rows = [
+    ...Array.from({ length: 20 }, (_, i) => newsItem("stripe", i)),
+    ...Array.from({ length: 3 }, (_, i) => newsItem("notion", i)),
+  ];
+  const out = fairTrim(rows);
+  assertEquals(out.filter((r) => r.company_name === "stripe").length, 8);
+  assertEquals(out.filter((r) => r.company_name === "notion").length, 3);
 });

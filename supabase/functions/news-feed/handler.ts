@@ -25,8 +25,12 @@ const corsHeaders = {
 const NEWS_COLS = "id, company_name, headline, url, summary, source, published_at";
 // Per-section cap. The feed is a glanceable digest, not an archive.
 const PER_SECTION_LIMIT = 50;
+// Fairness cap: one very newsy company can't crowd out the rest of a
+// section. The DB query over-fetches this pool, then JS trims per company.
+const PER_COMPANY_LIMIT = 8;
+const FETCH_POOL = 250;
 
-type NewsItem = {
+export type NewsItem = {
   id: string;
   company_name: string;
   headline: string;
@@ -43,18 +47,36 @@ function jsonResponse(payload: unknown, status = 200): Response {
   });
 }
 
-/** Distinct, non-empty, trimmed company names — order preserved. */
+/**
+ * Distinct company keys — trimmed and lowercased. The RSS scraper folds
+ * `company_news.company_name` to the same `lower(trim(...))` key, so a
+ * user's casing ("stripe" vs "Stripe") never hides their news.
+ */
 export function distinctCompanies(
   rows: Array<{ company: string | null }>,
 ): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const r of rows) {
-    const name = (r.company ?? "").trim();
+    const name = (r.company ?? "").trim().toLowerCase();
     if (name && !seen.has(name)) {
       seen.add(name);
       out.push(name);
     }
+  }
+  return out;
+}
+
+/** Trim each section to `PER_COMPANY_LIMIT` per company, `PER_SECTION_LIMIT` total. */
+export function fairTrim(rows: NewsItem[]): NewsItem[] {
+  const perCompany = new Map<string, number>();
+  const out: NewsItem[] = [];
+  for (const row of rows) {
+    const n = perCompany.get(row.company_name) ?? 0;
+    if (n >= PER_COMPANY_LIMIT) continue;
+    perCompany.set(row.company_name, n + 1);
+    out.push(row);
+    if (out.length >= PER_SECTION_LIMIT) break;
   }
   return out;
 }
@@ -103,9 +125,9 @@ export async function handleRequest(req: Request): Promise<Response> {
         .in("company_name", companies)
         .is("archived_at", null)
         .order("published_at", { ascending: false })
-        .limit(PER_SECTION_LIMIT);
+        .limit(FETCH_POOL);
       if (error) throw error;
-      return (data ?? []) as NewsItem[];
+      return fairTrim((data ?? []) as NewsItem[]);
     }
 
     const [applied_news, target_news] = await Promise.all([
@@ -115,10 +137,8 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     return jsonResponse({ applied_news, target_news });
   } catch (e) {
+    // Log the detail server-side; never leak DB / auth internals to the client.
     console.error("news-feed error:", e);
-    return jsonResponse(
-      { error: e instanceof Error ? e.message : "Unknown error" },
-      500,
-    );
+    return jsonResponse({ error: "Failed to load the news feed." }, 500);
   }
 }

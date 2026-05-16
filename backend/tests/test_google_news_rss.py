@@ -144,6 +144,14 @@ def test_classify_borderline_when_company_absent() -> None:
     assert verdict == "borderline"
 
 
+def test_classify_short_company_name_never_heuristic_passes() -> None:
+    # "X" would substring-match almost any headline — must defer to LLM.
+    verdict = classify_relevance(
+        "Model X recall announced", "X", "https://techcrunch.com"
+    )
+    assert verdict == "borderline"
+
+
 # --------------------------------------------------------------------------
 # extract_items
 # --------------------------------------------------------------------------
@@ -175,6 +183,16 @@ def test_extract_items_skips_items_without_title_or_link() -> None:
 
 def test_extract_items_returns_empty_on_garbage_xml() -> None:
     assert extract_items("Stripe", "<not-xml") == []
+
+
+def test_extract_items_skips_non_http_links() -> None:
+    xml = _rss(
+        _item("Stripe news - TechCrunch", "javascript:alert(1)"),
+        _item("Stripe news two - TechCrunch", "https://x/ok"),
+    )
+    items = extract_items("Stripe", xml)
+    assert len(items) == 1
+    assert items[0].url == "https://x/ok"
 
 
 # --------------------------------------------------------------------------
