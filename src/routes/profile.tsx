@@ -18,6 +18,7 @@ import { ThemePicker } from "@/components/profile/ThemePicker";
 import { usePhoto } from "@/lib/cinema-theme";
 import {
   loadCareerBuddyState,
+  parseRadar,
   type CvRadar as CvRadarData,
   type SkillEntry,
 } from "@/lib/cv-storage";
@@ -65,11 +66,9 @@ function readSkillsFromState(): SkillEntry[] {
 }
 
 function readRadarFromState(): CvRadarData | null {
-  const raw = loadCareerBuddyState().profile?.radar;
-  if (raw && Array.isArray(raw.axes) && raw.axes.length > 0) {
-    return raw;
-  }
-  return null;
+  // parseRadar fully shape-checks — a partial persisted radar that
+  // reached CvInsights would crash the render.
+  return parseRadar(loadCareerBuddyState().profile?.radar) ?? null;
 }
 
 function ProfilePage() {

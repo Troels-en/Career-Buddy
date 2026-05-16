@@ -7,7 +7,7 @@
  * or missing fields fall back to {@link emptyState} / DEFAULT_PROFILE.
  */
 
-import { STORAGE_KEY, type CvRadar } from "./cv-storage";
+import { STORAGE_KEY, parseRadar } from "./cv-storage";
 import {
   DEFAULT_PROFILE,
   SEED_APPS,
@@ -43,32 +43,6 @@ function migrateSkill(entry: unknown): SkillEntry | null {
     out.evidence = e.evidence.trim();
   }
   return out;
-}
-
-/**
- * Carry a persisted CV radar through, fully shape-checked. analyze-cv
- * Zod-validates on write, but localStorage can hold a hand-edited or
- * older-shape value — a partial radar that reaches `CvInsights`
- * (which maps `strengths` / `weaknesses` / `gaps`) would crash the
- * render. So require a non-empty `axes` of `{name, score}` plus three
- * string-array insight fields; anything else drops to `undefined`.
- */
-function migrateRadar(raw: unknown): CvRadar | undefined {
-  if (!raw || typeof raw !== "object") return undefined;
-  const r = raw as Record<string, unknown>;
-  if (!Array.isArray(r.axes) || r.axes.length === 0) return undefined;
-  const axesOk = r.axes.every((a) => {
-    if (!a || typeof a !== "object") return false;
-    const ax = a as Record<string, unknown>;
-    return typeof ax.name === "string" && typeof ax.score === "number";
-  });
-  if (!axesOk) return undefined;
-  const isStringArray = (v: unknown): boolean =>
-    Array.isArray(v) && v.every((x) => typeof x === "string");
-  if (!isStringArray(r.strengths) || !isStringArray(r.weaknesses) || !isStringArray(r.gaps)) {
-    return undefined;
-  }
-  return raw as CvRadar;
 }
 
 export function emptyState(): State {
@@ -132,7 +106,7 @@ export function migrateProfile(raw: unknown): Profile {
     cv_fit_score: num("cv_fit_score"),
     // F2: preserve the radar + the Supabase freshness timestamp so an
     // Overview mount (setState(loadState())) does not strip them.
-    radar: migrateRadar(r.radar),
+    radar: parseRadar(r.radar),
     updated_at: typeof r.updated_at === "string" ? r.updated_at : undefined,
   };
 }

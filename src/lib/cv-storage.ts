@@ -182,3 +182,38 @@ export function mergeAnalysisIntoState(
   };
   return { ...state, profile: next };
 }
+
+/**
+ * Validate a persisted CV radar. analyze-cv Zod-validates the radar on
+ * write, but localStorage can hold a hand-edited or older-shape value
+ * — a partial radar reaching `CvRadar` / `CvInsights` (which map
+ * `axes` and the `strengths`/`weaknesses`/`gaps` arrays) would crash
+ * the render. Returns the radar only when fully shaped: a non-empty
+ * `axes` of `{name, score}` plus three string-array insight fields;
+ * anything else returns `undefined`.
+ *
+ * Single source of truth — both persisted-radar readers (the Overview
+ * monolith via `state.ts migrateProfile`, and the Profile route via
+ * `readRadarFromState`) run a value through here.
+ */
+export function parseRadar(raw: unknown): CvRadar | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  if (!Array.isArray(r.axes) || r.axes.length === 0) return undefined;
+  const axesOk = r.axes.every((a) => {
+    if (!a || typeof a !== "object") return false;
+    const ax = a as Record<string, unknown>;
+    return typeof ax.name === "string" && typeof ax.score === "number";
+  });
+  if (!axesOk) return undefined;
+  const isStringArray = (v: unknown): boolean =>
+    Array.isArray(v) && v.every((x) => typeof x === "string");
+  if (
+    !isStringArray(r.strengths) ||
+    !isStringArray(r.weaknesses) ||
+    !isStringArray(r.gaps)
+  ) {
+    return undefined;
+  }
+  return raw as CvRadar;
+}

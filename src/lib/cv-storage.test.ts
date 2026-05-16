@@ -4,6 +4,7 @@ import {
   STORAGE_KEY,
   loadCareerBuddyState,
   mergeAnalysisIntoState,
+  parseRadar,
   saveCareerBuddyState,
   type CareerBuddyState,
   type CvAnalysisResponse,
@@ -179,5 +180,51 @@ describe("mergeAnalysisIntoState", () => {
     expect(reloaded.profile?.cv_analyzed).toBe(true);
     expect(reloaded.profile?.name).toBe("Sample Candidate");
     expect(reloaded.profile?.strengths).toEqual(["B2B sales", "German native"]);
+  });
+});
+
+describe("parseRadar", () => {
+  const valid = {
+    axes: [
+      { name: "Leadership", score: 70 },
+      { name: "Execution", score: 55 },
+    ],
+    strengths: ["Closed enterprise deals"],
+    weaknesses: ["No P&L ownership"],
+    gaps: ["Lead a launch"],
+    snapshot_id: "snap-1",
+  };
+
+  test("returns a fully-shaped radar unchanged", () => {
+    expect(parseRadar(valid)).toEqual(valid);
+  });
+
+  test("returns undefined for non-objects", () => {
+    expect(parseRadar(undefined)).toBeUndefined();
+    expect(parseRadar(null)).toBeUndefined();
+    expect(parseRadar(42)).toBeUndefined();
+  });
+
+  test("returns undefined when axes is missing / empty / not an array", () => {
+    expect(parseRadar({ ...valid, axes: [] })).toBeUndefined();
+    expect(parseRadar({ ...valid, axes: "nope" })).toBeUndefined();
+  });
+
+  test("returns undefined when an axis entry lacks name or score", () => {
+    expect(parseRadar({ ...valid, axes: [{}] })).toBeUndefined();
+    expect(parseRadar({ ...valid, axes: [{ name: "X" }] })).toBeUndefined();
+    expect(parseRadar({ ...valid, axes: [{ score: 1 }] })).toBeUndefined();
+  });
+
+  test("returns undefined when an insight field is missing or not a string array", () => {
+    expect(parseRadar({ ...valid, strengths: undefined })).toBeUndefined();
+    expect(parseRadar({ ...valid, weaknesses: "w" })).toBeUndefined();
+    expect(parseRadar({ ...valid, gaps: [1, 2] })).toBeUndefined();
+  });
+
+  test("accepts empty insight arrays (UI renders an empty tab)", () => {
+    expect(
+      parseRadar({ ...valid, strengths: [], weaknesses: [], gaps: [] }),
+    ).toBeTruthy();
   });
 });
