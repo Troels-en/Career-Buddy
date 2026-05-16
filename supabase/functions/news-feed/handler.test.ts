@@ -13,20 +13,20 @@ import {
 
 import {
   distinctCompanies,
-  fairTrim,
   handleRequest,
+  mergeSection,
   type NewsItem,
 } from "./handler.ts";
 
-function newsItem(company: string, n: number): NewsItem {
+function newsItem(company: string, isoDate: string): NewsItem {
   return {
-    id: `${company}-${n}`,
+    id: `${company}-${isoDate}`,
     company_name: company,
-    headline: `${company} headline ${n}`,
-    url: `https://news.test/${company}/${n}`,
+    headline: `${company} headline ${isoDate}`,
+    url: `https://news.test/${company}/${isoDate}`,
     summary: null,
     source: "Test",
-    published_at: new Date().toISOString(),
+    published_at: isoDate,
   };
 }
 
@@ -78,12 +78,30 @@ Deno.test("distinctCompanies lowercases so casing never hides news", () => {
   assertEquals(out, ["stripe"]);
 });
 
-Deno.test("fairTrim caps per company so one loud company can't dominate", () => {
-  const rows = [
-    ...Array.from({ length: 20 }, (_, i) => newsItem("stripe", i)),
-    ...Array.from({ length: 3 }, (_, i) => newsItem("notion", i)),
+Deno.test("mergeSection interleaves companies newest-first", () => {
+  const stripe = [
+    newsItem("stripe", "2026-05-15T10:00:00Z"),
+    newsItem("stripe", "2026-05-13T10:00:00Z"),
   ];
-  const out = fairTrim(rows);
-  assertEquals(out.filter((r) => r.company_name === "stripe").length, 8);
-  assertEquals(out.filter((r) => r.company_name === "notion").length, 3);
+  const notion = [
+    newsItem("notion", "2026-05-14T10:00:00Z"),
+    newsItem("notion", "2026-05-12T10:00:00Z"),
+  ];
+  const out = mergeSection([stripe, notion]);
+  assertEquals(
+    out.map((r) => r.published_at),
+    [
+      "2026-05-15T10:00:00Z",
+      "2026-05-14T10:00:00Z",
+      "2026-05-13T10:00:00Z",
+      "2026-05-12T10:00:00Z",
+    ],
+  );
+});
+
+Deno.test("mergeSection caps the section at 50 items", () => {
+  const big = Array.from({ length: 80 }, (_, i) =>
+    newsItem("stripe", `2026-01-01T00:${String(i).padStart(2, "0")}:00Z`),
+  );
+  assertEquals(mergeSection([big]).length, 50);
 });

@@ -15,9 +15,10 @@ export function CompanyNewsCard({ item }: { item: CompanyNewsItem }) {
       newsId: item.id,
       company: item.company_name,
     });
-    // Defence in depth: only ever open http(s) links, never a
-    // `javascript:` / `data:` URL that slipped past ingestion.
-    if (!/^https?:\/\//i.test(item.url)) return;
+    // Defence in depth: only ever open https links, never a
+    // `javascript:` / `data:` / plain-`http:` URL that slipped past
+    // ingestion.
+    if (!/^https:\/\//i.test(item.url)) return;
     window.open(item.url, "_blank", "noopener,noreferrer");
   }
 

@@ -185,10 +185,11 @@ def test_extract_items_returns_empty_on_garbage_xml() -> None:
     assert extract_items("Stripe", "<not-xml") == []
 
 
-def test_extract_items_skips_non_http_links() -> None:
+def test_extract_items_keeps_only_https_links() -> None:
     xml = _rss(
         _item("Stripe news - TechCrunch", "javascript:alert(1)"),
-        _item("Stripe news two - TechCrunch", "https://x/ok"),
+        _item("Stripe news two - TechCrunch", "http://x/insecure"),
+        _item("Stripe news three - TechCrunch", "https://x/ok"),
     )
     items = extract_items("Stripe", xml)
     assert len(items) == 1
