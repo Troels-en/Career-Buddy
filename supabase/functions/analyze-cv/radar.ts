@@ -8,29 +8,15 @@
 import { z } from "https://esm.sh/zod@3.23.8";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-// Pinned axis sets — target-profile-aware. The LLM never invents axis
-// names; it scores exactly the set we hand it. Validator rejects any
-// drift.
+// Pinned axis sets live in _shared so the frontend's parseRadar
+// validates against the exact same names with no drift. Re-exported
+// here so radar.ts stays the single import surface for the function.
+import {
+  RADAR_AXES_COMMERCIAL,
+  RADAR_AXES_TECHNICAL,
+} from "../_shared/radar-axes.ts";
 
-// Default (technical roles): SWE, data, DevOps, ML, design-eng.
-export const RADAR_AXES_TECHNICAL = [
-  "Technical depth",
-  "Leadership",
-  "Domain expertise",
-  "Communication",
-  "Execution",
-  "Growth trajectory",
-] as const;
-
-// Non-technical (sales, BD, ops, product, marketing, exec).
-export const RADAR_AXES_COMMERCIAL = [
-  "Commercial acumen",
-  "Leadership",
-  "Domain expertise",
-  "Communication",
-  "Execution",
-  "Growth trajectory",
-] as const;
+export { RADAR_AXES_COMMERCIAL, RADAR_AXES_TECHNICAL };
 
 // Role categories that flip the axis set to the technical variant.
 // Ids match the canonical TRACKS list (src/lib/tracks.ts) — the data

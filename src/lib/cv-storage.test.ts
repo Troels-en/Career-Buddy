@@ -216,11 +216,37 @@ describe("parseRadar", () => {
     expect(parseRadar({ ...valid, axes: [{ score: 1 }] })).toBeUndefined();
   });
 
-  test("returns undefined for an empty axis name or out-of-range score", () => {
-    expect(parseRadar({ ...valid, axes: [{ name: "  ", score: 50 }] })).toBeUndefined();
-    expect(parseRadar({ ...valid, axes: [{ name: "X", score: -1 }] })).toBeUndefined();
-    expect(parseRadar({ ...valid, axes: [{ name: "X", score: 101 }] })).toBeUndefined();
-    expect(parseRadar({ ...valid, axes: [{ name: "X", score: NaN }] })).toBeUndefined();
+  test("returns undefined for an out-of-range score", () => {
+    expect(
+      parseRadar({ ...valid, axes: [{ name: "Leadership", score: -1 }] }),
+    ).toBeUndefined();
+    expect(
+      parseRadar({ ...valid, axes: [{ name: "Leadership", score: 101 }] }),
+    ).toBeUndefined();
+    expect(
+      parseRadar({ ...valid, axes: [{ name: "Leadership", score: NaN }] }),
+    ).toBeUndefined();
+  });
+
+  test("returns undefined for an axis name outside the pinned set", () => {
+    expect(
+      parseRadar({ ...valid, axes: [{ name: "Vibes", score: 50 }] }),
+    ).toBeUndefined();
+    expect(
+      parseRadar({ ...valid, axes: [{ name: "  ", score: 50 }] }),
+    ).toBeUndefined();
+  });
+
+  test("accepts pinned axis names from either set", () => {
+    expect(
+      parseRadar({
+        ...valid,
+        axes: [
+          { name: "Technical depth", score: 60 },
+          { name: "Commercial acumen", score: 40 },
+        ],
+      }),
+    ).toBeTruthy();
   });
 
   test("returns undefined when an insight field is missing or not a string array", () => {
