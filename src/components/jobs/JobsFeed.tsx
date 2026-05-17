@@ -24,6 +24,7 @@ import {
   tokenize,
   type FitProfile,
 } from "@/lib/job-fit";
+import { useActiveJobsCount, formatJobsCount } from "@/lib/jobs-count";
 import type { ScoredJob, VcJob } from "@/lib/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -32,7 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
  *
  * Every filter chip translates to a PostgREST query param so the
  * Supabase API does the heavy lifting instead of pulling the entire
- * 9,980-row jobs table into the browser on every visit. This is the
+ * jobs table into the browser on every visit. This is the
  * "C" fix for the 1,000-row PostgREST cap that previously hid 90%
  * of the job feed behind the default max-rows ceiling.
  *
@@ -196,6 +197,7 @@ export function JobsFeed() {
   const [presets, setPresets] = useState<FilterPreset[]>([]);
   const [dismissedSet, setDismissedSet] = useState<Set<string>>(new Set());
   const reqIdRef = useRef(0);
+  const { data: liveTotal } = useActiveJobsCount();
 
   useEffect(() => {
     setPresets(loadPresets());
@@ -327,7 +329,9 @@ export function JobsFeed() {
             ? "Loading live openings…"
             : hasFilters
               ? `${rankedJobs.length} of ${visibleJobs.length} matching live roles`
-              : `${rankedJobs.length} of ${visibleJobs.length} live operator-track roles`}
+              : typeof liveTotal === "number"
+                ? `${rankedJobs.length} of ${formatJobsCount(liveTotal)} live operator-track roles`
+                : `${rankedJobs.length} live operator-track roles`}
           {refetching && <Loader2 className="w-4 h-4 animate-spin text-cinema-ink-mute" />}
         </h2>
         <div className="flex items-center gap-3 text-sm">
