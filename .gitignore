@@ -11,7 +11,8 @@ build/
 
 # Tooling artefacts
 .playwright-mcp/
-.claude/
+.claude/*
+!.claude/skills/
 artifacts/
 
 # Browser-driver screenshots — test artefacts, not source
