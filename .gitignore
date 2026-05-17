@@ -88,3 +88,4 @@ lerna-debug.log*
 career-buddy-*.png
 cloudflare-*.png
 supabase/.temp/
+.external-models-approved
