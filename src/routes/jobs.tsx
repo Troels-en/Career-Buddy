@@ -41,8 +41,8 @@ function JobsPage() {
         headline={<>Every role we found.</>}
         subhead={
           <>
-            One filterable feed across 209 venture-backed firms and the
-            companies they fund. Filter by role, level, country, ATS,
+            One filterable feed across hundreds of venture-backed firms and
+            the companies they fund. Filter by role, level, country, ATS,
             languages, salary, recency, remote, visa. Sort by best fit
             against your CV.
           </>

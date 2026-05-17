@@ -119,14 +119,14 @@ function DesignPreviewPage() {
                   Live, right now
                 </div>
                 <StatBlock
-                  value="9,980"
-                  label="Active roles, refreshed every night from 209 venture-backed firms and the companies they fund."
+                  value="Thousands"
+                  label="Active roles, refreshed every night from hundreds of venture-backed firms and the companies they fund."
                   tone="dark"
                 />
                 <div className="h-px bg-white/15 my-6" />
                 <StatBlock
-                  value="883"
-                  label="Operator-track roles already classified into Founders Associate, BizOps, Strategy, BD, Chief of Staff, Investment Analyst — Tier-2 grades the rest each morning."
+                  value="Classified"
+                  label="Operator-track roles sorted into Founders Associate, BizOps, Strategy, BD, Chief of Staff, Investment Analyst — Tier-2 grades the rest each morning."
                   tone="dark"
                 />
               </GlassCard>
@@ -209,8 +209,8 @@ function DesignPreviewPage() {
                 </div>
                 <h2 className="text-cinema-h1 mb-4">Start with your CV.</h2>
                 <p className="text-cinema-body">
-                  9,980 live operator roles and your CV in one calm feed.
-                  Free while in beta — no credit card, no waitlist.
+                  Thousands of live operator roles and your CV in one calm
+                  feed. Free while in beta — no credit card, no waitlist.
                 </p>
               </div>
               <div className="mt-8 md:mt-0 flex flex-wrap gap-3">
