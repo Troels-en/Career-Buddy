@@ -38,6 +38,10 @@ Brief one-paragraph each. Why rejected.
 | 0002 | [Three-lane tracking: repo / Obsidian / Notion](0002-three-lane-tracking.md) | Accepted | 2026-05-08 |
 | 0003 | [Python + uv for Layer-1 scraper](0003-python-uv-scraper.md) | Accepted | 2026-05-08 |
 | 0004 | [Supabase as source-of-truth (vcs + jobs)](0004-supabase-as-source-of-truth.md) | Accepted | 2026-05-08 |
+| 0005 | [Candidate Memory: a hosted, user-owned context layer](0005-candidate-memory-layer.md) | Accepted | 2026-05-17 |
+
+ADR 0005 has a companion build spec:
+[0005-candidate-memory-build-spec.md](0005-candidate-memory-build-spec.md).
 
 ## When to write an ADR
 
